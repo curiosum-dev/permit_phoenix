@@ -1,0 +1,30 @@
+defmodule Permit.EctoFakeApp.Router do
+  @moduledoc false
+  use Phoenix.Router
+
+  pipeline :browser do
+    plug(Plug.Session,
+      store: :cookie,
+      key: "_example_key",
+      signing_salt: "8ixXSdpw"
+    )
+
+    plug(:fetch_session)
+    plug(:fetch_flash)
+  end
+
+  scope "/" do
+    pipe_through(:browser)
+
+    post("/sign_in", Permit.EctoFakeApp.SessionController, :create)
+    resources("/items", Permit.EctoFakeApp.ItemControllerUsingRepo)
+
+    get("/details/:id", Permit.EctoFakeApp.ItemControllerUsingRepo, :show)
+
+    get(
+      "/action_without_authorizing",
+      Permit.EctoFakeApp.ItemControllerUsingRepo,
+      :action_without_authorizing
+    )
+  end
+end
