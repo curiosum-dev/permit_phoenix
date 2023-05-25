@@ -4,11 +4,23 @@ defmodule Permit.Phoenix.MixProject do
   def project do
     [
       app: :permit_phoenix,
-      version: "0.1.0",
+      version: "0.0.1",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      description:
+        "Phoenix, Plug and LiveView integrations for the Permit authorization library.",
+      package: package()
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/curiosum-dev/permit_phoenix/"},
+      maintainers: ["Michał Buszkiewicz", "Piotr Lisowski"],
+      files: ["lib", "mix.exs", "README*"]
     ]
   end
 
@@ -30,19 +42,24 @@ defmodule Permit.Phoenix.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:permit, path: "../permit"},
-      {:permit_ecto, path: "../permit_ecto", only: :test},
+      {:permit, "~> 0.0.2"},
+      {:permit_ecto, "~> 0.0.1", only: :test},
       {:ecto, "~> 3.0", only: :test},
       {:ecto_sql, "~> 3.0", only: :test},
       {:postgrex, "~> 0.16", only: :test},
       {:phoenix_live_view, "#{live_view_version()}", optional: true},
-      {:phoenix, "~> 1.6", optional: true},
+      {:phoenix, "#{phoenix_version()}", optional: true},
       {:jason, "~> 1.3", only: [:dev, :test]},
-      {:floki, ">= 0.30.0", only: :test}
+      {:floki, ">= 0.30.0", only: :test},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 
   defp live_view_version() do
-    System.get_env("LIVE_VIEW_VERSION", "~> 0.17.0")
+    System.get_env("LIVE_VIEW_VERSION", "~> 0.17")
+  end
+
+  defp phoenix_version() do
+    System.get_env("LIVE_VIEW_VERSION", "~> 1.6")
   end
 end
