@@ -33,31 +33,38 @@ defmodule Permit.Phoenix.Controller do
   @callback resource_module() :: module()
 
   with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
-    @callback prefilter_query_fn(Types.controller_action(), module(), map()) :: Ecto.Query.t()
-    @callback postfilter_query_fn(Ecto.Query.t()) :: Ecto.Query.t()
+    @callback base_query(Types.controller_action(), module(), Types.subject(), map()) ::
+                Ecto.Query.t()
+    @callback finalize_query(
+                Ecto.Query.t(),
+                Types.controller_action(),
+                module(),
+                Types.subject(),
+                map()
+              ) :: Ecto.Query.t()
   end
 
   @callback handle_unauthorized(Types.conn()) :: Types.conn()
-  @callback user_from_conn(Types.conn()) :: struct()
-  @callback preload_resource_in() :: list(atom())
+  @callback fetch_subject(Types.conn()) :: struct()
+  @callback preload_actions() :: list(atom())
   @callback fallback_path() :: binary()
   @callback except() :: list(atom())
-  @callback loader_fn(Types.controller_action(), Types.resource_module(), Types.subject(), map()) ::
+  @callback loader(Types.controller_action(), Types.resource_module(), Types.subject(), map()) ::
               any()
   @optional_callbacks [
                         if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-                          do: {:prefilter_query_fn, 3}
+                          do: {:base_query, 4}
                         ),
                         if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-                          do: {:postfilter_query_fn, 1}
+                          do: {:finalize_query, 5}
                         ),
                         handle_unauthorized: 1,
-                        preload_resource_in: 0,
+                        preload_actions: 0,
                         fallback_path: 0,
                         resource_module: 0,
                         except: 0,
-                        user_from_conn: 1,
-                        loader_fn: 4
+                        fetch_subject: 1,
+                        loader: 4
                       ]
                       |> Enum.filter(& &1)
 
@@ -67,13 +74,10 @@ defmodule Permit.Phoenix.Controller do
         raise(":authorization_module option must be given when using ControllerAuthorization")
 
     opts_resource_module = opts[:resource_module]
-    opts_preload_resource_in = opts[:preload_resource_in]
+    opts_preload_actions = opts[:preload_actions]
     opts_fallback_path = opts[:fallback_path]
     opts_except = opts[:except]
-    loader_fn = opts[:loader_fn]
-
-    # TODO: if prefilter_query_fn or postfilter_query_fn is defined alongside loader_fn, it should
-    #       throw an error
+    loader = opts[:loader]
 
     opts_id_param_name =
       Keyword.get(
@@ -89,7 +93,7 @@ defmodule Permit.Phoenix.Controller do
         :id
       )
 
-    opts_user_from_conn_fn = opts[:user_from_conn]
+    opts_fetch_subject_fn = opts[:fetch_subject]
 
     quote generated: true do
       require Logger
@@ -118,12 +122,12 @@ defmodule Permit.Phoenix.Controller do
       def resource_module, do: unquote(opts_resource_module)
 
       @impl true
-      def preload_resource_in do
-        preload_resource_in = unquote(opts_preload_resource_in)
+      def preload_actions do
+        preload_actions = unquote(opts_preload_actions)
 
-        case preload_resource_in do
-          nil -> [:show, :edit, :update, :delete]
-          list when is_list(list) -> list ++ [:show, :edit, :update, :delete]
+        case preload_actions do
+          nil -> [:show, :edit, :update, :delete, :index]
+          list when is_list(list) -> list ++ [:show, :edit, :update, :delete, :index]
         end
       end
 
@@ -149,25 +153,33 @@ defmodule Permit.Phoenix.Controller do
 
       with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
         @impl true
-        def prefilter_query_fn(_action, resource_module, %{unquote(opts_id_param_name) => id}) do
+        def base_query(_action, resource_module, _subject, %{unquote(opts_id_param_name) => id}) do
           resource_module
           |> Permit.Ecto.filter_by_field(unquote(opts_id_struct_field_name), id)
         end
 
-        def prefilter_query_fn(_action, resource_module, _params),
+        def base_query(_action, resource_module, _subject, _params),
           do: Permit.Ecto.from(resource_module)
 
         @impl true
-        def postfilter_query_fn(query), do: query
+        def finalize_query(query, _action, _resource_module, _subject, _params), do: query
       end
 
       @impl true
-      def user_from_conn(conn) do
-        user_from_conn_fn = unquote(opts_user_from_conn_fn)
+      def loader(action, resource_module, subject, params) do
+        case unquote(loader) do
+          nil -> nil
+          function -> function.(action, resource_module, subject, params)
+        end
+      end
+
+      @impl true
+      def fetch_subject(conn) do
+        fetch_subject_fn = unquote(opts_fetch_subject_fn)
 
         cond do
-          is_function(user_from_conn_fn, 1) ->
-            user_from_conn_fn.(conn)
+          is_function(fetch_subject_fn, 1) ->
+            fetch_subject_fn.(conn)
 
           true ->
             conn.assigns[:current_user]
@@ -177,17 +189,18 @@ defmodule Permit.Phoenix.Controller do
       defoverridable(
         [
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:prefilter_query_fn, 3}
+            do: {:base_query, 4}
           ),
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:postfilter_query_fn, 1}
+            do: {:finalize_query, 5}
           ),
           handle_unauthorized: 1,
-          preload_resource_in: 0,
+          preload_actions: 0,
           fallback_path: 0,
           resource_module: 0,
           except: 0,
-          user_from_conn: 1
+          fetch_subject: 1,
+          loader: 4
         ]
         |> Enum.filter(& &1)
       )
@@ -196,19 +209,19 @@ defmodule Permit.Phoenix.Controller do
         Permit.Phoenix.Plug,
         [
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:prefilter_query_fn, &__MODULE__.prefilter_query_fn/3}
+            do: {:base_query, &__MODULE__.base_query/4}
           ),
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:postfilter_query_fn, &__MODULE__.postfilter_query_fn/1}
+            do: {:finalize_query, &__MODULE__.finalize_query/5}
           ),
           authorization_module: &__MODULE__.authorization_module/0,
           resource_module: &__MODULE__.resource_module/0,
-          preload_resource_in: &__MODULE__.preload_resource_in/0,
+          preload_actions: &__MODULE__.preload_actions/0,
           fallback_path: &__MODULE__.fallback_path/0,
           except: &__MODULE__.except/0,
-          user_from_conn: &__MODULE__.user_from_conn/1,
+          fetch_subject: &__MODULE__.fetch_subject/1,
           handle_unauthorized: &__MODULE__.handle_unauthorized/1,
-          loader_fn: unquote(loader_fn)
+          loader: &__MODULE__.loader/4
         ]
         |> Enum.filter(& &1)
       )

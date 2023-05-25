@@ -5,7 +5,7 @@ defmodule Permit.NonEctoFakeApp.ItemControllerUsingLoader do
 
   use Permit.Phoenix.Controller,
     authorization_module: Authorization,
-    loader_fn: &__MODULE__.preload/4,
+    loader: &__MODULE__.preload/4,
     resource_module: Item
 
   def index(conn, _params), do: text(conn, "listing all items")

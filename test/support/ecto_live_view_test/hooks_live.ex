@@ -8,7 +8,7 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
     resource_module: Item
 
   @impl true
-  def prefilter_query_fn(_action, Item, %{"id" => id}) do
+  def base_query(_action, Item, _subject, %{"id" => id}) do
     id =
       if is_bitstring(id) do
         String.to_integer(id)
@@ -23,7 +23,7 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   def handle_unauthorized(socket), do: {:cont, assign(socket, :unauthorized, true)}
 
   @impl true
-  def user_from_session(session) do
+  def fetch_subject(_socket, session) do
     case session["token"] do
       "valid_token" -> %User{id: 1, roles: session["roles"] || []}
       _ -> nil

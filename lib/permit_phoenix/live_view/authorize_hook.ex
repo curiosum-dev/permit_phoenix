@@ -38,7 +38,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
       # Loader function for a singular resource in appropriate actions (:show, etc.); usually a context
       # function. If not defined, Repo.get is used by default.
-      def loader_fn, do: fn id -> get_organization!(id) end
+      def loader, do: fn id -> get_organization!(id) end
 
   Depending on whether you use `use MyAppWeb, :live_view` or not to configure your LiveViews,
   it might be more convenient to provide configuration as options when you mix it in via `use`.
@@ -128,7 +128,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   @spec authenticate(Types.socket(), map()) :: Types.socket()
   defp authenticate(socket, session) do
-    current_user = socket.view.user_from_session(session)
+    current_user = socket.view.fetch_subject(socket, session)
     live_view_assign(socket, :current_user, current_user)
   end
 
@@ -136,7 +136,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   defp authorize(socket, params) do
     %{assigns: %{live_action: live_action}} = socket
 
-    if live_action in socket.view.preload_resource_in() do
+    if live_action in socket.view.preload_actions() do
       preload_and_authorize(socket, params)
     else
       just_authorize(socket)
@@ -170,10 +170,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     resolver_module = authorization_module.resolver_module()
     resource_module = socket.view.resource_module()
 
-    # TODO prefilter_query_fn is optional callback
-    prefilter_query_fn = &socket.view.prefilter_query_fn/3
-    # TODO postfilter_query_fn is optional callback
-    postfilter_query_fn = &socket.view.postfilter_query_fn/1
+    base_query = &socket.view.base_query/4
+    finalize_query = &socket.view.finalize_query/5
     subject = socket.assigns.current_user
     action = socket.assigns.live_action
     singular? = action in actions_module.singular_groups()
@@ -192,8 +190,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
            action,
            %{
              params: params,
-             prefilter_query_fn: prefilter_query_fn,
-             potsfilter_query_fn: postfilter_query_fn
+             base_query: base_query,
+             finalize_query: finalize_query
            }
          ) do
       {:authorized, records} ->

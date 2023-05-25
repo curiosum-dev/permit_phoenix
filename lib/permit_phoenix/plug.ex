@@ -41,11 +41,11 @@ defmodule Permit.Phoenix.Plug do
   defmodule LvauthWeb.Planning.RouteTemplateController do
     plug Permit.Phoenix.Plug,
       authorization_module: MyApp.Authorization,
-      loader_fn: fn id -> Lvauth.Repo.get(Customer, id) end,
+      loader: fn id -> Lvauth.Repo.get(Customer, id) end,
       resource_module: Lvauth.Management.Customer,
       id_param_name: "id",
       except: [:example],
-      user_from_conn: fn conn -> conn.assigns[:signed_in_user] end
+      fetch_subject: fn conn -> conn.assigns[:signed_in_user] end
       handle_unauthorized: fn conn -> redirect(conn, to: "/foo") end
 
     def show(conn, params) do
@@ -105,7 +105,7 @@ defmodule Permit.Phoenix.Plug do
     else
       resource_module = opts[:resource_module]
 
-      subject = opts[:user_from_conn].(conn)
+      subject = opts[:fetch_subject].(conn)
       authorize(conn, opts, controller_action, subject, resource_module)
     end
   end
@@ -124,7 +124,7 @@ defmodule Permit.Phoenix.Plug do
   end
 
   defp authorize(conn, opts, controller_action, subject, resource_module) do
-    if controller_action in opts[:preload_resource_in] do
+    if controller_action in opts[:preload_actions] do
       authorize_and_preload_resource(conn, opts, controller_action, subject, resource_module)
     else
       just_authorize(conn, opts, controller_action, subject, resource_module)
@@ -169,9 +169,9 @@ defmodule Permit.Phoenix.Plug do
 
     meta =
       %{
-        loader_fn: opts[:loader_fn],
-        prefilter_query_fn: opts[:prefilter_query_fn],
-        postfilter_query_fn: opts[:postfilter_query_fn],
+        loader: opts[:loader],
+        base_query: opts[:base_query],
+        finalize_query: opts[:finalize_query],
         params: conn.params
       }
       |> Map.filter(fn {_, val} -> !!val end)
