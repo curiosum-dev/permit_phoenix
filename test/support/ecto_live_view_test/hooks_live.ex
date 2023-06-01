@@ -8,15 +8,21 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
     resource_module: Item
 
   @impl true
-  def base_query(_action, Item, _subject, %{"id" => id}) do
-    id =
-      if is_bitstring(id) do
-        String.to_integer(id)
-      else
-        id
-      end
+  def base_query(_action, Item, _subject, params) do
+    case params do
+      %{"id" => id} ->
+        id =
+          if is_bitstring(id) do
+            String.to_integer(id)
+          else
+            id
+          end
 
-    Permit.EctoFakeApp.Item.Context.filter_by_id(Item, id)
+        Permit.EctoFakeApp.Item.Context.filter_by_id(Item, id)
+
+      %{} ->
+        Item
+    end
   end
 
   @impl true

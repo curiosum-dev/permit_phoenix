@@ -74,20 +74,26 @@ defmodule Permit.EctoPlugTest do
     end
 
     test "authorizes :show action for object with matching :owner_id", %{conn: conn} do
-      # conn = call(conn, :get, "/items/1")
-      # assert conn.resp_body =~ ~r[Item]
-      # assert [%Item{id: 1}] = conn.assigns[:loaded_resources]
-      assert_raise Plug.Conn.WrapperError,
-                   ~r/Permit.Ecto.Permissions.UnconvertibleConditionError/,
-                   fn -> call(conn, :get, "/items/1") end
+      conn = call(conn, :get, "/items/1")
+      assert conn.resp_body =~ ~r[Item]
+      assert %Item{id: 1} = conn.assigns[:loaded_resource]
     end
 
     test "does not authorize :show action for object without matching :owner_id", %{conn: conn} do
-      # conn = call(conn, :get, "/items/2")
-      # assert_unauthorized(conn, "/?foo")
+      conn = call(conn, :get, "/items/2")
+      assert_unauthorized(conn, "/?foo")
+    end
+  end
+
+  describe "function_owner" do
+    setup do
+      %{conn: create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:function_owner]})}
+    end
+
+    test "raises error when condition is defined using function", %{conn: conn} do
       assert_raise Plug.Conn.WrapperError,
                    ~r/Permit.Ecto.Permissions.UnconvertibleConditionError/,
-                   fn -> call(conn, :get, "/items/2") end
+                   fn -> call(conn, :get, "/items/1") end
     end
   end
 

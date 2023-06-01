@@ -83,43 +83,40 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :show on owned item", %{conn: conn} do
-      # {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/items/1")
 
-      # assigns = get_assigns(lv)
+      assigns = get_assigns(lv)
 
-      # assert :unauthorized not in Map.keys(assigns)
-      # assert %{loaded_resources: [%Item{id: 1}]} = assigns
-      assert_raise_UnconvertibleConditionError(conn, "/items/1")
+      assert :unauthorized not in Map.keys(assigns)
+      assert %{loaded_resource: %Item{id: 1}} = assigns
     end
 
     test "cannot do :show on non-owned item", %{conn: conn} do
-      # {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/items/1")
 
-      # assigns = get_assigns(lv)
+      assigns = get_assigns(lv)
 
-      # assert :unauthorized not in Map.keys(assigns)
-      # assert %{loaded_resources: [%Item{id: 1}]} = assigns
-      assert_raise_UnconvertibleConditionError(conn, "/items/1")
+      assert :unauthorized not in Map.keys(assigns)
+      assert %{loaded_resource: %Item{id: 1}} = assigns
     end
 
     test "can do :edit on owned item", %{conn: conn} do
-      # {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/items/1/edit")
 
-      # assigns = get_assigns(lv)
+      assigns = get_assigns(lv)
 
-      # assert :unauthorized not in Map.keys(assigns)
-      # assert %{loaded_resources: [%Item{id: 1}]} = assigns
-      assert_raise_UnconvertibleConditionError(conn, "/items/1/edit")
+      assert :unauthorized not in Map.keys(assigns)
+      assert %{loaded_resource: %Item{id: 1}} = assigns
     end
 
     test "cannot do :edit on non-owned item", %{conn: conn} do
-      # {:ok, lv, _html} = live(conn, "/items/2/edit")
+      {:ok, lv, _html} = live(conn, "/items/2/edit")
 
-      # assigns = get_assigns(lv)
+      assigns = get_assigns(lv)
 
-      # assert :unauthorized in Map.keys(assigns)
-      # assert :loaded_resources not in Map.keys(assigns)
-      assert_raise_UnconvertibleConditionError(conn, "/items/2/edit")
+      assert :unauthorized in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "can do :new on items", %{conn: conn} do
@@ -130,6 +127,14 @@ defmodule Permit.EctoLiveViewTest do
       assert :mounted in Map.keys(assigns)
       assert :unauthorized not in Map.keys(assigns)
       assert :loaded_resources not in Map.keys(assigns)
+    end
+  end
+
+  describe "function_owner" do
+    setup [:function_owner_role, :init_session]
+
+    test "raises error when condition is given as a function", %{conn: conn} do
+      assert_raise_UnconvertibleConditionError(conn, "/items/1")
     end
   end
 
@@ -158,7 +163,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "can do :show", %{conn: conn} do
@@ -215,7 +221,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
@@ -224,7 +231,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
@@ -233,7 +241,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "cant do :show on item 3", %{conn: conn} do
@@ -242,7 +251,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "can do :new on items", %{conn: conn} do
@@ -252,7 +262,8 @@ defmodule Permit.EctoLiveViewTest do
 
       assert :mounted in Map.keys(assigns)
       assert :unauthorized not in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
   end
 
@@ -309,7 +320,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "cant do :show on item 3", %{conn: conn} do
@@ -318,7 +330,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "can do :new on items", %{conn: conn} do
@@ -328,7 +341,8 @@ defmodule Permit.EctoLiveViewTest do
 
       assert :mounted in Map.keys(assigns)
       assert :unauthorized not in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
   end
 
@@ -349,7 +363,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "cant do :show on item 1", %{conn: conn} do
@@ -358,7 +373,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "can do :edit on item 2", %{conn: conn} do
@@ -385,7 +401,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "cant do :show on item 3", %{conn: conn} do
@@ -394,7 +411,8 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
 
     test "can do :new on items", %{conn: conn} do
@@ -404,7 +422,8 @@ defmodule Permit.EctoLiveViewTest do
 
       assert :mounted in Map.keys(assigns)
       assert :unauthorized not in Map.keys(assigns)
-      assert :loaded_resources not in Map.keys(assigns)
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
     end
   end
 
@@ -414,7 +433,8 @@ defmodule Permit.EctoLiveViewTest do
     test "is successful, authorizes and preloads resource", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
 
-      assert :loaded_resources not in (lv |> get_assigns() |> Map.keys())
+      assert (lv |> get_assigns())[:loaded_resources]
+      refute (lv |> get_assigns())[:loaded_resource]
 
       lv |> element("#navigate_show") |> render_click()
 
@@ -428,7 +448,9 @@ defmodule Permit.EctoLiveViewTest do
       lv |> element("#navigate_edit") |> render_click()
 
       assigns = get_assigns(lv)
-      assert :loaded_resources not in (assigns |> Map.keys())
+
+      refute assigns[:loaded_resources]
+      refute assigns[:loaded_resource]
       assert %{unauthorized: true} = assigns
     end
   end
@@ -439,6 +461,10 @@ defmodule Permit.EctoLiveViewTest do
 
   def owner_role(context) do
     {:ok, Map.put(context, :roles, [:owner])}
+  end
+
+  def function_owner_role(context) do
+    {:ok, Map.put(context, :roles, [:function_owner])}
   end
 
   def inspector_role(context) do

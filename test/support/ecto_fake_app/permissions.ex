@@ -11,6 +11,11 @@ defmodule Permit.EctoFakeApp.Permissions do
 
   def can(:owner = role) do
     grant(role)
+    |> all(Item, [user, item], owner_id: user.id)
+  end
+
+  def can(:function_owner = role) do
+    grant(role)
     |> all(Item, fn user, item -> item.owner_id == user.id end)
   end
 

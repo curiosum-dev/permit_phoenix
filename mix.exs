@@ -4,8 +4,8 @@ defmodule Permit.Phoenix.MixProject do
   def project do
     [
       app: :permit_phoenix,
-      version: "0.0.2",
-      elixir: "~> 1.14",
+      version: "0.0.3",
+      elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -43,7 +43,7 @@ defmodule Permit.Phoenix.MixProject do
   defp deps do
     [
       {:permit, "~> 0.0.3"},
-      {:permit_ecto, "~> 0.0.2", only: :test},
+      {:permit_ecto, "~> 0.0.3", only: :test},
       {:ecto, "~> 3.0", only: :test},
       {:ecto_sql, "~> 3.0", only: :test},
       {:postgrex, "~> 0.16", only: :test},

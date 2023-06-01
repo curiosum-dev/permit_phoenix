@@ -176,11 +176,11 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     action = socket.assigns.live_action
     singular? = action in actions_module.singular_groups()
 
-    {load_key, auth_function} =
+    {load_key, other_key, auth_function} =
       if singular? do
-        {:loaded_resource, &resolver_module.authorize_and_preload_one!/5}
+        {:loaded_resource, :loaded_resources, &resolver_module.authorize_and_preload_one!/5}
       else
-        {:loaded_resources, &resolver_module.authorize_and_preload_all!/5}
+        {:loaded_resources, :loaded_resource, &resolver_module.authorize_and_preload_all!/5}
       end
 
     case auth_function.(
@@ -195,10 +195,16 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
            }
          ) do
       {:authorized, records} ->
-        {:authorized, live_view_assign(socket, load_key, records)}
+        {:authorized,
+         socket
+         |> live_view_assign(load_key, records)
+         |> live_view_assign(other_key, nil)}
 
       :unauthorized ->
-        {:unauthorized, socket}
+        {:unauthorized,
+         socket
+         |> live_view_assign(load_key, nil)
+         |> live_view_assign(other_key, nil)}
     end
   end
 
