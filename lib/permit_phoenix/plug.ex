@@ -20,13 +20,13 @@ defmodule Permit.Phoenix.Plug do
 
   # Permissions module - just as an example
   defmodule MyApp.Authorization.Permissions do
-    use Permit.RuleSyntax
+    use Permit.Permissions
 
     def can(%{role: :manager} = role) do
       # A :manager can do all CRUD actions on RouteTemplate, and can do :read on User
       # if the User has public: true OR the User has :overseer_id equal to current user's
       # id.
-      grant(role)
+      permit()
       |> all(Lvauth.Planning.RouteTemplate)
       |> read(Lvauth.Accounts.User, public: true)
       |> read(LvMainFrame.Accounts.User,
@@ -80,13 +80,14 @@ defmodule Permit.Phoenix.Plug do
   """
 
   alias Permit.{Resolver, Types}
+  alias Permit.Phoenix.Types, as: PhoenixTypes
 
-  @spec init(Types.plug_opts()) :: Types.plug_opts()
+  @spec init(PhoenixTypes.plug_opts()) :: PhoenixTypes.plug_opts()
   def init(opts) do
     opts
   end
 
-  @spec call(Plug.Conn.t(), Types.plug_opts()) :: Plug.Conn.t()
+  @spec call(PhoenixTypes.conn(), PhoenixTypes.plug_opts()) :: Plug.Conn.t()
   def call(conn, opts) do
     opts =
       opts
@@ -98,98 +99,103 @@ defmodule Permit.Phoenix.Plug do
           otherwise
       end)
 
-    controller_action = Phoenix.Controller.action_name(conn)
+    action_group = Phoenix.Controller.action_name(conn)
 
-    if controller_action in opts[:except] do
+    if action_group in opts[:except] do
       conn
     else
       resource_module = opts[:resource_module]
 
       subject = opts[:fetch_subject].(conn)
-      authorize(conn, opts, controller_action, subject, resource_module)
+      authorize(conn, opts, action_group, subject, resource_module)
     end
   end
 
   @spec authorize(
-          Plug.Conn.t(),
-          Types.plug_opts(),
-          Types.controller_action(),
+          PhoenixTypes.conn(),
+          PhoenixTypes.plug_opts(),
+          Types.action_group(),
           Types.subject() | nil,
-          Types.resource()
+          Types.object_or_resource_module()
         ) ::
           Plug.Conn.t()
-  defp authorize(conn, opts, _controller_action, nil, _resource) do
+  defp authorize(conn, opts, action, nil, _resource) do
     # subject is nil - meaning authorization is not granted
-    opts[:handle_unauthorized].(conn)
+    opts[:handle_unauthorized].(action, conn)
   end
 
-  defp authorize(conn, opts, controller_action, subject, resource_module) do
-    if controller_action in opts[:preload_actions] do
-      authorize_and_preload_resource(conn, opts, controller_action, subject, resource_module)
+  defp authorize(conn, opts, action_group, subject, resource_module) do
+    if action_group in opts[:preload_actions] do
+      authorize_and_preload_resource(conn, opts, action_group, subject, resource_module)
     else
-      just_authorize(conn, opts, controller_action, subject, resource_module)
+      just_authorize(conn, opts, action_group, subject, resource_module)
     end
   end
 
   @spec just_authorize(
-          Plug.Conn.t(),
-          Types.plug_opts(),
-          Types.controller_action(),
+          PhoenixTypes.conn(),
+          PhoenixTypes.plug_opts(),
+          Types.action_group(),
           Types.subject() | nil,
           Types.resource_module()
         ) ::
           Plug.Conn.t()
-  defp just_authorize(conn, opts, controller_action, subject, resource_module) do
+  defp just_authorize(conn, opts, action, subject, resource_module) do
     authorization_module = Keyword.fetch!(opts, :authorization_module)
 
     Resolver.authorized?(
       subject,
       authorization_module,
       resource_module,
-      controller_action
+      action
     )
     |> case do
       true -> conn
-      false -> opts[:handle_unauthorized].(conn)
+      false -> opts[:handle_unauthorized].(action, conn)
     end
   end
 
   @spec authorize_and_preload_resource(
-          Plug.Conn.t(),
-          Types.plug_opts(),
-          Types.controller_action(),
+          PhoenixTypes.conn(),
+          PhoenixTypes.plug_opts(),
+          Types.action_group(),
           Types.subject() | nil,
           Types.resource_module()
         ) ::
           Plug.Conn.t()
-  defp authorize_and_preload_resource(conn, opts, controller_action, subject, resource_module) do
+  defp authorize_and_preload_resource(conn, opts, action, subject, resource_module) do
     authorization_module = Keyword.fetch!(opts, :authorization_module)
     actions_module = authorization_module.actions_module()
-    number = if controller_action in actions_module.singular_groups(), do: :one, else: :all
+    number = if action in actions_module.singular_actions(), do: :one, else: :all
 
     meta =
       %{
         loader: opts[:loader],
         base_query: opts[:base_query],
         finalize_query: opts[:finalize_query],
-        params: conn.params
+        params: conn.params,
+        conn: conn
       }
       |> Map.filter(fn {_, val} -> !!val end)
 
     load_key = if number == :one, do: :loaded_resource, else: :loaded_resources
 
-    authorize_and_preload_fn(number, authorization_module)
-    |> apply([subject, authorization_module, resource_module, controller_action, meta])
-    |> case do
+    case authorize_and_preload_fn(number, authorization_module).(
+           subject,
+           authorization_module,
+           resource_module,
+           action,
+           meta
+         ) do
       {:authorized, record_or_records} -> Plug.Conn.assign(conn, load_key, record_or_records)
-      :unauthorized -> opts[:handle_unauthorized].(conn)
+      :unauthorized -> opts[:handle_unauthorized].(action, conn)
     end
   end
 
   defp authorize_and_preload_fn(number, authorization_module)
 
   # TODO: authorization_module is the app's permissions module
-  # (the one that uses RuleSyntax or Ecto.RuleSyntax), it has to point to the app's
+  # (the one that uses Permit.Permissions or Permit.Ecto.Permissions), it has to point to the app's
   # authorization configuration (the one that uses Permit or Permit.Ecto)
   defp authorize_and_preload_fn(:one, authorization_module) do
     &authorization_module.resolver_module().authorize_and_preload_one!/5

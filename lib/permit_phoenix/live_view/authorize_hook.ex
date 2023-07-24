@@ -82,7 +82,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   """
 
-  alias Permit.Types
+  alias Permit.Phoenix.Types, as: PhoenixTypes
 
   # These two modules will be checked for the existence of the assign/3 function.
   # If neither exists (no LiveView dependency in a project), no failure happens.
@@ -112,7 +112,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     end
   end
 
-  @spec on_mount(term(), map(), map(), Types.socket()) :: Types.hook_outcome()
+  @spec on_mount(term(), map(), map(), PhoenixTypes.socket()) :: PhoenixTypes.hook_outcome()
   def on_mount(_opt, params, session, socket) do
     socket
     |> attach_params_hook(params, session)
@@ -126,13 +126,13 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     |> respond()
   end
 
-  @spec authenticate(Types.socket(), map()) :: Types.socket()
+  @spec authenticate(PhoenixTypes.socket(), map()) :: PhoenixTypes.socket()
   defp authenticate(socket, session) do
     current_user = socket.view.fetch_subject(socket, session)
     live_view_assign(socket, :current_user, current_user)
   end
 
-  @spec authorize(Types.socket(), map()) :: Types.authorization_outcome()
+  @spec authorize(PhoenixTypes.socket(), map()) :: PhoenixTypes.live_authorization_result()
   defp authorize(socket, params) do
     %{assigns: %{live_action: live_action}} = socket
 
@@ -143,7 +143,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     end
   end
 
-  @spec just_authorize(Types.socket()) :: Types.authorization_outcome()
+  @spec just_authorize(PhoenixTypes.socket()) :: PhoenixTypes.live_authorization_result()
   defp just_authorize(socket) do
     authorization_module = socket.view.authorization_module()
     resource_module = socket.view.resource_module()
@@ -162,19 +162,21 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     end
   end
 
-  @spec preload_and_authorize(Types.socket(), map()) ::
-          Types.authorization_outcome()
+  @spec preload_and_authorize(PhoenixTypes.socket(), map()) ::
+          PhoenixTypes.live_authorization_result()
   defp preload_and_authorize(socket, params) do
     authorization_module = socket.view.authorization_module()
     actions_module = authorization_module.actions_module()
     resolver_module = authorization_module.resolver_module()
     resource_module = socket.view.resource_module()
 
-    base_query = &socket.view.base_query/4
-    finalize_query = &socket.view.finalize_query/5
+    # TODO: how to make sure base_query can use socket so it can be passed into e.g. id_param_name?
+    base_query = &socket.view.base_query/1
+    loader = &socket.view.loader/1
+    finalize_query = &socket.view.finalize_query/2
     subject = socket.assigns.current_user
     action = socket.assigns.live_action
-    singular? = action in actions_module.singular_groups()
+    singular? = action in actions_module.singular_actions()
 
     {load_key, other_key, auth_function} =
       if singular? do
@@ -190,6 +192,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
            action,
            %{
              params: params,
+             loader: loader,
+             socket: socket,
              base_query: base_query,
              finalize_query: finalize_query
            }
@@ -208,11 +212,11 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     end
   end
 
-  @spec respond(Types.authorization_outcome()) :: Types.hook_outcome()
-  defp respond(authorization_outcome)
+  @spec respond(PhoenixTypes.live_authorization_result()) :: PhoenixTypes.hook_outcome()
+  defp respond(live_authorization_result)
 
   defp respond({:unauthorized, socket}) do
-    socket.view.handle_unauthorized(socket)
+    socket.view.handle_unauthorized(socket.assigns[:live_action], socket)
   end
 
   defp respond({:authorized, socket}) do

@@ -8,12 +8,16 @@ defmodule Permit.NonEctoLiveViewTest.HooksLive do
     resource_module: Item
 
   @impl true
-  def loader(_, _, _, %{"id" => id}) do
+  def loader(%{params: %{"id" => id}}) do
     Permit.NonEctoFakeApp.Item.Context.get_item(id)
   end
 
+  def loader(%{action: :index}) do
+    Permit.NonEctoFakeApp.Item.Context.list_items()
+  end
+
   @impl true
-  def handle_unauthorized(socket), do: {:cont, assign(socket, :unauthorized, true)}
+  def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}
 
   @impl true
   def fetch_subject(_socket, session) do

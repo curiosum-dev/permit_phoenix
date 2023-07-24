@@ -7,8 +7,8 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
     authorization_module: Authorization,
     resource_module: Item
 
-  @impl true
-  def base_query(_action, Item, _subject, params) do
+  @impl Permit.Phoenix.LiveView
+  def base_query(%{resource_module: Item, params: params}) do
     case params do
       %{"id" => id} ->
         id =
@@ -25,10 +25,10 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
     end
   end
 
-  @impl true
-  def handle_unauthorized(socket), do: {:cont, assign(socket, :unauthorized, true)}
+  @impl Permit.Phoenix.LiveView
+  def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}
 
-  @impl true
+  @impl Permit.Phoenix.LiveView
   def fetch_subject(_socket, session) do
     case session["token"] do
       "valid_token" -> %User{id: 1, roles: session["roles"] || []}

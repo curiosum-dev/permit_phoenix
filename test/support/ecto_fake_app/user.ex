@@ -18,7 +18,7 @@ defmodule Permit.EctoFakeApp.User do
     |> cast(attrs, [:permission_level, :roles])
   end
 
-  defimpl Permit.HasRoles, for: Permit.EctoFakeApp.User do
-    def roles(user), do: user.roles
+  defimpl Permit.SubjectMapping, for: Permit.EctoFakeApp.User do
+    def subjects(user), do: user.roles
   end
 end
