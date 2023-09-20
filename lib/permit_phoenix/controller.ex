@@ -27,8 +27,11 @@ defmodule Permit.Phoenix.Controller do
       end
 
   """
-  alias Permit.Types
   alias Permit.Phoenix.Types, as: PhoenixTypes
+  alias Permit.Types
+
+  import Plug.Conn
+  import Phoenix.Controller
 
   @doc ~S"""
   Configures the controller with the application's authorization configuration.
@@ -75,20 +78,134 @@ defmodule Permit.Phoenix.Controller do
 
     Typically useful when using [nested resource routes](https://hexdocs.pm/phoenix/routing.html#nested-resources). In an action routed like `/users/:user_id/posts/:id`, you can use the `c:base_query/1` callback to filter records by `user_id`, while filtering by `id` itself will be applied automatically (the name of the ID parameter can be overridden with the `c:id_`).
 
+    ## Example
 
+        defmodule MyApp.CommentController do
+          use Permit.Phoenix.Controller,
+            authorization_module: MyApp.Authorization
+            resource_module: MyApp.Blog.Comment
+
+          @impl true
+          def base_query(%{
+            action: :index,
+            params: %{"article_id" => article_id}
+          }) do
+            MyApp.CommentQueries.by_article_id(article_id)
+          end
+        end
     """
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
+
+    @doc ~S"""
+    Post-processes an Ecto query constructed by `Permit.Ecto` based on controller action, resource module, subject (typically `:current_user`) and controller params.
+
+    Typically useful when using [nested resource routes](https://hexdocs.pm/phoenix/routing.html#nested-resources). In an action routed like `/users/:user_id/posts/:id`, you can use the `c:base_query/1` callback to filter records by `user_id`, while filtering by `id` itself will be applied automatically (the name of the ID parameter can be overridden with the `c:id_`).
+
+    ## Example
+
+        defmodule MyApp.CommentController do
+          use Permit.Phoenix.Controller,
+            authorization_module: MyApp.Authorization
+            resource_module: MyApp.Blog.Comment
+
+          # just for demonstration - please don't do it directly in controllers
+          import Ecto.Query
+
+          @impl true
+          def finalize_query(query, %{
+            action: :index,
+          }) do
+            query
+            |> preload([c], [:user])
+          end
+        end
+    """
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
   end
 
+  @doc ~S"""
+  Called when authorization on an action or a loaded record is not granted. Must halt `conn` after rendering or redirecting.
+
+  ## Example
+
+      defmodule MyApp.CommentController do
+        use Permit.Phoenix.Controller,
+          authorization_module: MyApp.Authorization
+          resource_module: MyApp.Blog.Comment
+
+        @impl true
+        def handle_unauthorized(action, conn) do
+          case get_format(conn) do
+            "json" ->
+              # render a 4xx JSON response
+
+            "html" ->
+              # handle HTML response, e.g. redirect
+          end
+        end
+      end
+  """
   @callback handle_unauthorized(Types.action_group(), PhoenixTypes.conn()) :: PhoenixTypes.conn()
+
+  @doc ~S"""
+  Retrieves the current user from `conn` as the authorization subject. Defaults to `conn.assigns[:current_user]`.
+
+  ## Example
+
+      @impl true
+      def fetch_subject(%{assigns: assigns}) do
+        assigns[:user]
+      end
+  """
   @callback fetch_subject(PhoenixTypes.conn()) :: Types.subject()
+
+  @doc ~S"""
+  Declares which actions in the controller are to use Permit's automatic preloading and authorization in addition to defaults: `[:show, :edit, :update, :delete, :index]`.
+
+  Defaults to `[]`, which means that `[:show, :edit, :update, :delete, :index]` and no other actions will use preloading.
+  """
   @callback preload_actions() :: list(Types.action_group())
+
+  @doc ~S"""
+  If `c:handle_unauthorized/2` is not defined, sets the fallback path to which the user is redirected on authorization failure.
+
+  Defaults to `/`.
+  """
   @callback fallback_path(Types.action_group(), PhoenixTypes.conn()) :: binary()
+
+  @doc ~S"""
+  Allows opting out of using Permit for given controller actions.
+
+  Defaults to `[]`, thus by default all actions are guarded with Permit.
+  """
   @callback except() :: list(Types.action_group())
+
+  @doc ~S"""
+  If `Permit.Ecto` is not used, it allows defining a loader function that loads a record or a list of records, depending on action type (singular or plural).
+
+  ## Example
+
+      @impl true
+      def loader(%{action: :index, params: %{page: page}}),
+        do: ItemContext.load_all(page: page)
+
+      def loader(%{action: :show}, params: %{id: id}),
+        do: ItemContext.load(id)
+  """
   @callback loader(Types.resolution_context()) :: Types.object() | nil
 
+  @doc ~S"""
+  Sets the name of the ID param that will be used for preloading a record for authorization.
+
+  Defaults to `"id"`. If the route contains a different name of the record ID param, it should be changed accordingly.
+  """
   @callback id_param_name(Types.action_group(), PhoenixTypes.conn()) :: binary()
+
+  @doc ~S"""
+  Sets the name of the field that contains the resource's ID which should be looked for.
+
+  Defaults to `:id`. If the record's ID (usually a primary key) is in a different field, then it should be changed accordingly.
+  """
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.conn()) :: atom()
 
   @optional_callbacks [
@@ -109,76 +226,42 @@ defmodule Permit.Phoenix.Controller do
                       |> Enum.filter(& &1)
 
   defmacro __using__(opts) do
-    opts_authorization_module =
-      opts[:authorization_module] ||
-        raise(":authorization_module option must be given when using ControllerAuthorization")
-
-    opts_resource_module = opts[:resource_module]
-    opts_preload_actions = opts[:preload_actions]
-    opts_fallback_path = opts[:fallback_path]
-    opts_except = opts[:except]
-    loader = opts[:loader]
-
-    opts_id_param_name = opts[:id_param_name]
-    opts_id_struct_field_name = opts[:id_struct_field_name]
-
-    opts_fetch_subject_fn = opts[:fetch_subject]
-
     quote generated: true do
       require Logger
 
-      with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
-        require Ecto.Query
-      end
+      # with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+      #   require Ecto.Query
+      # end
 
       @behaviour unquote(__MODULE__)
 
       @impl true
       def handle_unauthorized(action, conn) do
-        conn
-        |> put_flash(
-          :error,
-          unquote(opts[:error_msg]) || "You do not have permission to perform this action."
-        )
-        |> redirect(to: __MODULE__.fallback_path(action, conn))
-        |> halt()
+        unquote(__MODULE__).handle_unauthorized(action, conn, unquote(opts))
       end
 
       @impl true
-      def authorization_module, do: unquote(opts_authorization_module)
+      def authorization_module,
+        do:
+          unquote(opts[:authorization_module]) ||
+            raise(":authorization_module option must be given when using ControllerAuthorization")
 
       @impl true
-      def resource_module, do: unquote(opts_resource_module)
+      def resource_module, do: unquote(opts[:resource_module])
 
       @impl true
       def preload_actions do
-        preload_actions = unquote(opts_preload_actions)
-
-        case preload_actions do
-          nil -> [:show, :edit, :update, :delete, :index]
-          list when is_list(list) -> list ++ [:show, :edit, :update, :delete, :index]
-        end
+        unquote(__MODULE__).preload_actions(unquote(opts))
       end
 
       @impl true
       def fallback_path(action, conn) do
-        fallback_path = unquote(opts_fallback_path)
-
-        case fallback_path do
-          nil -> "/"
-          fun when is_function(fun) -> fun.(action, conn)
-          _ -> fallback_path
-        end
+        unquote(__MODULE__).fallback_path(action, conn, unquote(opts))
       end
 
       @impl true
       def except do
-        except = unquote(opts_except)
-
-        case except do
-          nil -> []
-          _ -> except
-        end
+        unquote(__MODULE__).except(unquote(opts))
       end
 
       with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
@@ -203,51 +286,28 @@ defmodule Permit.Phoenix.Controller do
         end
 
         @impl true
-        def finalize_query(query, %{}), do: query
+        def finalize_query(query, resolution_context),
+          do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
       end
 
       @impl true
       def loader(resolution_context) do
-        case unquote(loader) do
-          nil -> nil
-          function -> function.(resolution_context)
-        end
+        unquote(__MODULE__).loader(resolution_context, unquote(opts))
       end
 
       @impl true
       def id_param_name(action, conn) do
-        case unquote(opts_id_param_name) do
-          nil -> "id"
-          param_name when is_binary(param_name) -> param_name
-          param_name_fn when is_function(param_name_fn) -> param_name_fn.(action, conn)
-        end
+        unquote(__MODULE__).id_param_name(action, conn, unquote(opts))
       end
 
       @impl true
       def id_struct_field_name(action, conn) do
-        case unquote(opts_id_struct_field_name) do
-          nil ->
-            :id
-
-          struct_field_name when is_binary(struct_field_name) ->
-            struct_field_name
-
-          struct_field_name_fn when is_function(struct_field_name_fn) ->
-            struct_field_name_fn.(action, conn)
-        end
+        unquote(__MODULE__).id_struct_field_name(action, conn, unquote(opts))
       end
 
       @impl true
       def fetch_subject(conn) do
-        fetch_subject_fn = unquote(opts_fetch_subject_fn)
-
-        cond do
-          is_function(fetch_subject_fn, 1) ->
-            fetch_subject_fn.(conn)
-
-          true ->
-            conn.assigns[:current_user]
-        end
+        unquote(__MODULE__).fetch_subject(conn, unquote(opts))
       end
 
       defoverridable(
@@ -293,6 +353,112 @@ defmodule Permit.Phoenix.Controller do
         ]
         |> Enum.filter(& &1)
       )
+    end
+  end
+
+  @doc false
+  def handle_unauthorized(action, conn, opts) do
+    conn
+    |> put_flash(
+      :error,
+      opts[:error_msg] || "You do not have permission to perform this action."
+    )
+    |> redirect(to: __MODULE__.fallback_path(action, conn, opts))
+    |> halt()
+  end
+
+  @doc false
+  def fallback_path(action, conn, opts) do
+    case opts[:fallback_path] do
+      nil -> "/"
+      fun when is_function(fun) -> fun.(action, conn)
+      path -> path
+    end
+  end
+
+  @doc false
+  def preload_actions(opts) do
+    case opts[:preload_actions] do
+      nil -> [:show, :edit, :update, :delete, :index]
+      list when is_list(list) -> list ++ [:show, :edit, :update, :delete, :index]
+    end
+  end
+
+  @doc false
+  def except(opts) do
+    case opts[:except] do
+      nil -> []
+      except -> except
+    end
+  end
+
+  with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+    @doc false
+    def base_query(
+          %{
+            action: action,
+            resource_module: resource_module,
+            conn: conn,
+            params: params
+          },
+          opts
+        ) do
+      param = __MODULE__.id_param_name(action, conn, opts)
+      field = __MODULE__.id_struct_field_name(action, conn, opts)
+
+      case params do
+        %{^param => id} ->
+          resource_module
+          |> Permit.Ecto.filter_by_field(field, id)
+
+        _ ->
+          Permit.Ecto.from(resource_module)
+      end
+    end
+
+    @doc false
+    def finalize_query(query, %{}, _), do: query
+  end
+
+  @doc false
+  def loader(resolution_context, opts) do
+    case opts[:loader] do
+      nil -> nil
+      function -> function.(resolution_context)
+    end
+  end
+
+  @doc false
+  def id_param_name(action, conn, opts) do
+    case opts[:id_param_name] do
+      nil -> "id"
+      param_name when is_binary(param_name) -> param_name
+      param_name_fn when is_function(param_name_fn) -> param_name_fn.(action, conn)
+    end
+  end
+
+  @doc false
+  def id_struct_field_name(action, conn, opts) do
+    case opts[:id_struct_field_name] do
+      nil ->
+        :id
+
+      struct_field_name when is_binary(struct_field_name) ->
+        struct_field_name
+
+      struct_field_name_fn when is_function(struct_field_name_fn) ->
+        struct_field_name_fn.(action, conn)
+    end
+  end
+
+  @doc false
+  def fetch_subject(conn, opts) do
+    fetch_subject_fn = opts[:fetch_subject_fn]
+
+    if is_function(fetch_subject_fn, 1) do
+      fetch_subject_fn.(conn)
+    else
+      conn.assigns[:current_user]
     end
   end
 end

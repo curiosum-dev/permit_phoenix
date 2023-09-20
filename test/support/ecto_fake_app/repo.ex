@@ -3,7 +3,7 @@ defmodule Permit.EctoFakeApp.Repo do
     otp_app: :permit_phoenix,
     adapter: Ecto.Adapters.Postgres
 
-  alias Permit.EctoFakeApp.{User, Item, Repo}
+  alias Permit.EctoFakeApp.{Item, Repo, User}
 
   def seed_data! do
     users = [

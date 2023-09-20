@@ -1,4 +1,5 @@
 defmodule Permit.NonEctoFakeApp.ItemControllerUsingLoader do
+  @moduledoc false
   use Phoenix.Controller
 
   alias Permit.NonEctoFakeApp.{Authorization, Item, NoResultsError}

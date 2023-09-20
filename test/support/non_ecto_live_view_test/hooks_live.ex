@@ -2,6 +2,7 @@ defmodule Permit.NonEctoLiveViewTest.HooksLive do
   use Phoenix.LiveView, namespace: Permit
 
   alias Permit.NonEctoFakeApp.{Authorization, Item, User}
+  alias Permit.NonEctoFakeApp.Item.Context
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
@@ -9,11 +10,11 @@ defmodule Permit.NonEctoLiveViewTest.HooksLive do
 
   @impl true
   def loader(%{params: %{"id" => id}}) do
-    Permit.NonEctoFakeApp.Item.Context.get_item(id)
+    Context.get_item(id)
   end
 
   def loader(%{action: :index}) do
-    Permit.NonEctoFakeApp.Item.Context.list_items()
+    Context.list_items()
   end
 
   @impl true

@@ -1,7 +1,9 @@
 defmodule Permit.Phoenix.MixProject do
+  @moduledoc false
   use Mix.Project
 
   @version "0.1.0"
+  @source_url "https://github.com/curiosum-dev/permit_phoenix"
 
   def project do
     [
@@ -14,7 +16,8 @@ defmodule Permit.Phoenix.MixProject do
       description:
         "Phoenix, Plug and LiveView integrations for the Permit authorization library.",
       package: package(),
-      dialyzer: [plt_add_apps: [:ex_unit, :permit_ecto]]
+      dialyzer: [plt_add_apps: [:ex_unit, :permit_ecto]],
+      docs: docs()
     ]
   end
 
@@ -55,15 +58,24 @@ defmodule Permit.Phoenix.MixProject do
       {:jason, "~> 1.3", only: [:dev, :test]},
       {:floki, ">= 0.30.0", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 
-  defp live_view_version() do
+  defp docs do
+    [
+      main: "Permit.Phoenix",
+      source_ref: "v#{@version}",
+      source_url: @source_url
+    ]
+  end
+
+  defp live_view_version do
     System.get_env("LIVE_VIEW_VERSION", "~> 0.17")
   end
 
-  defp phoenix_version() do
+  defp phoenix_version do
     System.get_env("LIVE_VIEW_VERSION", "~> 1.6")
   end
 end

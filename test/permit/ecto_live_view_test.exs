@@ -1,11 +1,12 @@
 defmodule Permit.EctoLiveViewTest do
+  @moduledoc false
   use Permit.RepoCase
 
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
   alias Permit.EctoLiveViewTest.{Endpoint, HooksLive}
-  alias Permit.EctoFakeApp.{Item, User, Repo}
+  alias Permit.EctoFakeApp.{Item, Repo, User}
 
   @endpoint Endpoint
 
@@ -134,7 +135,7 @@ defmodule Permit.EctoLiveViewTest do
     setup [:function_owner_role, :init_session]
 
     test "raises error when condition is given as a function", %{conn: conn} do
-      assert_raise_UnconvertibleConditionError(conn, "/items/1")
+      assert_raise_unconvertible_condition_error(conn, "/items/1")
     end
   end
 
@@ -496,7 +497,7 @@ defmodule Permit.EctoLiveViewTest do
     HooksLive.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
   end
 
-  defp assert_raise_UnconvertibleConditionError(conn, url) do
+  defp assert_raise_unconvertible_condition_error(conn, url) do
     assert_raise Plug.Conn.WrapperError,
                  ~r/Permit.Ecto.UnconvertibleConditionError/,
                  fn ->

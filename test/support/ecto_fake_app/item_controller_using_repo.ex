@@ -1,4 +1,5 @@
 defmodule Permit.EctoFakeApp.ItemControllerUsingRepo do
+  @moduledoc false
   use Phoenix.Controller
 
   alias Permit.EctoFakeApp.{Authorization, Item}

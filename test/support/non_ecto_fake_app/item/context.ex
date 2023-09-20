@@ -1,4 +1,5 @@
 defmodule Permit.NonEctoFakeApp.Item.Context do
+  @moduledoc false
   alias Permit.NonEctoFakeApp.Item
 
   @item1 %Item{id: 1, owner_id: 1, permission_level: 1}
@@ -13,7 +14,7 @@ defmodule Permit.NonEctoFakeApp.Item.Context do
   def get_item(3), do: @item3
   def get_item(_), do: nil
 
-  def list_items() do
+  def list_items do
     [@item1, @item2, @item3]
   end
 

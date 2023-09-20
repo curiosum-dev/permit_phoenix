@@ -1,4 +1,5 @@
 defmodule Permit.NonEctoFakeApp.RouterUsingLoader do
+  @moduledoc false
   use Phoenix.Router
 
   pipeline :browser do

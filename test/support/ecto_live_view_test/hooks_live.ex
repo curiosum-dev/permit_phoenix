@@ -2,6 +2,7 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   use Phoenix.LiveView, namespace: Permit
 
   alias Permit.EctoFakeApp.{Authorization, Item, User}
+  alias Permit.EctoFakeApp.Item.Context
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
@@ -18,7 +19,7 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
             id
           end
 
-        Permit.EctoFakeApp.Item.Context.filter_by_id(Item, id)
+        Context.filter_by_id(Item, id)
 
       %{} ->
         Item

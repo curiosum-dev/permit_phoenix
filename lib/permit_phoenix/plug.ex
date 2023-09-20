@@ -79,8 +79,8 @@ defmodule Permit.Phoenix.Plug do
   ##
   """
 
-  alias Permit.{Resolver, Types}
   alias Permit.Phoenix.Types, as: PhoenixTypes
+  alias Permit.{Resolver, Types}
 
   @spec init(PhoenixTypes.plug_opts()) :: PhoenixTypes.plug_opts()
   def init(opts) do
@@ -194,9 +194,6 @@ defmodule Permit.Phoenix.Plug do
 
   defp authorize_and_preload_fn(number, authorization_module)
 
-  # TODO: authorization_module is the app's permissions module
-  # (the one that uses Permit.Permissions or Permit.Ecto.Permissions), it has to point to the app's
-  # authorization configuration (the one that uses Permit or Permit.Ecto)
   defp authorize_and_preload_fn(:one, authorization_module) do
     &authorization_module.resolver_module().authorize_and_preload_one!/5
   end

@@ -1,4 +1,5 @@
 defmodule Permit.NonEctoFakeApp.User.Context do
+  @moduledoc false
   alias Permit.NonEctoFakeApp.User
 
   def create_user(attrs \\ %{}) do

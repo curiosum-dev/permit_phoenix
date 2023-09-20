@@ -1,11 +1,12 @@
 defmodule Permit.EctoPlugTest do
+  @moduledoc false
   use Permit.RepoCase, async: true
   use Permit.EctoPlugTest.RouterHelper
 
   alias Permit.EctoFakeApp.{
     Item,
-    Router,
-    Repo
+    Repo,
+    Router
   }
 
   setup do

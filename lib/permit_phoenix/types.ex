@@ -3,8 +3,8 @@ defmodule Permit.Phoenix.Types do
   Defines types for usage with Permit in the context of Phoenix applications.
   """
 
-  alias Permit.Types
   alias Permit.Ecto.Types, as: EctoTypes
+  alias Permit.Types
 
   # Phoenix-specific types
   @type conn :: Plug.Conn.t()

@@ -1,4 +1,5 @@
 defmodule Permit.EctoFakeApp.Permissions do
+  @moduledoc false
   use Permit.Ecto.Permissions, actions_module: Permit.Phoenix.Actions
 
   alias Permit.EctoFakeApp.Item

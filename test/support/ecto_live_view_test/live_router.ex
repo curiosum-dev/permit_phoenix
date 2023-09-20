@@ -1,4 +1,5 @@
 defmodule Permit.EctoLiveViewTest.LiveRouter do
+  @moduledoc false
   use Phoenix.Router
   import Phoenix.LiveView.Router
   alias Permit.EctoLiveViewTest.HooksLive

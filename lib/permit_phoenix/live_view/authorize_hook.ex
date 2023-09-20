@@ -170,7 +170,6 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     resolver_module = authorization_module.resolver_module()
     resource_module = socket.view.resource_module()
 
-    # TODO: how to make sure base_query can use socket so it can be passed into e.g. id_param_name?
     base_query = &socket.view.base_query/1
     loader = &socket.view.loader/1
     finalize_query = &socket.view.finalize_query/2

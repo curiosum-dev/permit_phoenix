@@ -38,8 +38,10 @@ defmodule Permit.Phoenix.LiveView do
 
       {:halt, socket(socket, to: socket.view.fallback_path())}
   """
-  alias Permit.Types
   alias Permit.Phoenix.Types, as: PhoenixTypes
+  alias Permit.Types
+
+  import Phoenix.LiveView
 
   @callback resource_module() :: module()
   with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
@@ -78,20 +80,6 @@ defmodule Permit.Phoenix.LiveView do
                       |> Enum.filter(& &1)
 
   defmacro __using__(opts) do
-    authorization_module =
-      opts[:authorization_module] ||
-        raise(":authorization_module option must be given when using LiveViewAuthorization")
-
-    resource_module = opts[:resource_module]
-    preload_actions = opts[:preload_actions]
-    fallback_path = opts[:fallback_path]
-    except = opts[:except]
-    handle_unauthorized = opts[:handle_unauthorized]
-    loader = opts[:loader]
-
-    opts_id_param_name = opts[:id_param_name]
-    opts_id_struct_field_name = opts[:id_struct_field_name]
-
     quote generated: true do
       import unquote(__MODULE__)
 
@@ -103,37 +91,28 @@ defmodule Permit.Phoenix.LiveView do
 
       @impl true
       def handle_unauthorized(action, socket) do
-        handle_unauthorized = unquote(handle_unauthorized)
-
-        case handle_unauthorized do
-          nil -> {:halt, push_redirect(socket, to: fallback_path(action, socket))}
-          fun when is_function(fun) -> fun.(action, socket)
-          _ -> handle_unauthorized
-        end
+        unquote(__MODULE__).handle_unauthorized(action, socket, unquote(opts))
       end
 
       @impl true
-      def authorization_module, do: unquote(authorization_module)
+      def authorization_module,
+        do:
+          unquote(opts[:authorization_module]) ||
+            raise(":authorization_module option must be given when using LiveViewAuthorization")
 
       @impl true
-      def resource_module, do: unquote(resource_module)
+      def resource_module, do: unquote(opts[:resource_module])
 
       @impl true
-      def preload_actions, do: (unquote(preload_actions) || []) ++ [:show, :edit, :index]
+      def preload_actions, do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index]
 
       @impl true
       def fallback_path(action, socket) do
-        fallback_path = unquote(fallback_path)
-
-        case fallback_path do
-          nil -> "/"
-          fun when is_function(fun) -> fun.(action, socket)
-          _ -> fallback_path
-        end
+        unquote(__MODULE__).fallback_path(action, socket, unquote(opts))
       end
 
       @impl true
-      def except, do: unquote(except) || []
+      def except, do: unquote(opts[:except]) || []
 
       if {:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto) do
         @impl true
@@ -157,39 +136,23 @@ defmodule Permit.Phoenix.LiveView do
         end
 
         @impl true
-        def finalize_query(query, %{}),
-          do: query
+        def finalize_query(query, resolution_context),
+          do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
       end
 
       @impl true
       def loader(resolution_context) do
-        case unquote(loader) do
-          nil -> nil
-          function -> function.(resolution_context)
-        end
+        unquote(__MODULE__).loader(resolution_context, unquote(opts))
       end
 
       @impl true
       def id_param_name(action, socket) do
-        case unquote(opts_id_param_name) do
-          nil -> "id"
-          param_name when is_binary(param_name) -> param_name
-          param_name_fn when is_function(param_name_fn) -> param_name_fn.(action, socket)
-        end
+        unquote(__MODULE__).id_param_name(action, socket, unquote(opts))
       end
 
       @impl true
       def id_struct_field_name(action, socket) do
-        case unquote(opts_id_struct_field_name) do
-          nil ->
-            :id
-
-          struct_field_name when is_binary(struct_field_name) ->
-            struct_field_name
-
-          struct_field_name_fn when is_function(struct_field_name_fn) ->
-            struct_field_name_fn.(action, socket)
-        end
+        unquote(__MODULE__).id_struct_field_name(action, socket, unquote(opts))
       end
 
       defoverridable(
@@ -221,26 +184,101 @@ defmodule Permit.Phoenix.LiveView do
   For example, a handle_unauthorized/1 implementation must redirect when halting during mounting,
   while it needn't redirect when halting during the handle_params lifecycle.
 
+  ## Example
 
-
-  @impl true
-      def handle_unauthorized(socket) do
-        if mounting?(socket) do
-          {:halt, push_redirect(socket, to: "/foo")}
-        else
-          {:halt, assign(socket, :unauthorized, true)}
-        end
-      end
+      @impl true
+          def handle_unauthorized(socket) do
+            if mounting?(socket) do
+              {:halt, push_redirect(socket, to: "/foo")}
+            else
+              {:halt, assign(socket, :unauthorized, true)}
+            end
+          end
   """
   @spec mounting?(PhoenixTypes.socket()) :: boolean()
   def mounting?(socket) do
-    try do
-      Phoenix.LiveView.get_connect_info(socket, :uri)
-      true
-    rescue
-      # Raises RuntimeError if outside mount/1 because socket_info only exists while mounting.
-      # This allows us to distinguish between accessing directly from router or via e.g. handle_params.
-      RuntimeError -> false
+    Phoenix.LiveView.get_connect_info(socket, :uri)
+    true
+  rescue
+    # Raises RuntimeError if outside mount/1 because socket_info only exists while mounting.
+    # This allows us to distinguish between accessing directly from router or via e.g. handle_params.
+    RuntimeError -> false
+  end
+
+  @doc false
+  def handle_unauthorized(action, socket, opts) do
+    case opts[:handle_unauthorized] do
+      nil -> {:halt, push_redirect(socket, to: fallback_path(action, socket, opts))}
+      fun when is_function(fun) -> fun.(action, socket)
+      handle_unauthorized -> handle_unauthorized
+    end
+  end
+
+  @doc false
+  def fallback_path(action, socket, opts) do
+    case opts[:fallback_path] do
+      nil -> "/"
+      fun when is_function(fun) -> fun.(action, socket)
+      path -> path
+    end
+  end
+
+  if {:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto) do
+    @doc false
+    def base_query(
+          %{
+            action: action,
+            resource_module: resource_module,
+            socket: socket,
+            params: params
+          },
+          opts
+        ) do
+      param = __MODULE__.id_param_name(action, socket, opts)
+      field = __MODULE__.id_struct_field_name(action, socket, opts)
+
+      case params do
+        %{^param => id} ->
+          resource_module
+          |> Permit.Ecto.filter_by_field(field, id)
+
+        _ ->
+          Permit.Ecto.from(resource_module)
+      end
+    end
+
+    @doc false
+    def finalize_query(query, %{}, _opts), do: query
+  end
+
+  @doc false
+  def loader(resolution_context, opts) do
+    case opts[:loader] do
+      nil -> nil
+      function -> function.(resolution_context)
+    end
+  end
+
+  @doc false
+  def id_param_name(action, socket, opts) do
+    case opts[:id_param_name] do
+      nil -> "id"
+      param_name when is_binary(param_name) -> param_name
+      param_name_fn when is_function(param_name_fn) -> param_name_fn.(action, socket)
+    end
+  end
+
+  @doc false
+  def id_struct_field_name(action, socket, opts) do
+    case opts[:id_struct_field_name] do
+      nil ->
+        :id
+
+      struct_field_name when is_binary(struct_field_name) ->
+        struct_field_name
+
+      struct_field_name_fn when is_function(struct_field_name_fn) ->
+        struct_field_name_fn.(action, socket)
     end
   end
 end
