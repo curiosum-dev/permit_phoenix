@@ -1,6 +1,9 @@
 defmodule Permit.EctoLiveViewTest.EndpointOverridable do
+  @moduledoc false
   defmacro __before_compile__(_env) do
     quote do
+      alias Permit.EctoLiveViewTest.LiveRouter
+
       @parsers Plug.Parsers.init(
                  parsers: [:urlencoded, :multipart, :json],
                  pass: ["*/*"],
@@ -13,7 +16,7 @@ defmodule Permit.EctoLiveViewTest.EndpointOverridable do
         %{conn | secret_key_base: config(:secret_key_base)}
         |> Plug.Parsers.call(@parsers)
         |> Plug.Conn.put_private(:phoenix_endpoint, __MODULE__)
-        |> Permit.EctoLiveViewTest.LiveRouter.call([])
+        |> LiveRouter.call([])
       end
     end
   end
@@ -27,8 +30,8 @@ defmodule Permit.EctoLiveViewTest.Endpoint do
   socket("/live", Phoenix.LiveView.Socket)
 
   defoverridable url: 0, script_name: 0, config: 1, config: 2, static_path: 1
-  def url(), do: "http://localhost:4000"
-  def script_name(), do: []
+  def url, do: "http://localhost:4000"
+  def script_name, do: []
   def static_path(path), do: "/static" <> path
   def config(:live_view), do: [signing_salt: "112345678212345678312345678412"]
   def config(:secret_key_base), do: String.duplicate("57689", 50)

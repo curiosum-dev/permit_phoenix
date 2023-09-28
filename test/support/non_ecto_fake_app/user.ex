@@ -3,7 +3,7 @@ defmodule Permit.NonEctoFakeApp.User do
 
   defstruct [:id, :permission_level, items: [], roles: []]
 
-  defimpl Permit.HasRoles, for: Permit.NonEctoFakeApp.User do
-    def roles(user), do: user.roles
+  defimpl Permit.SubjectMapping, for: Permit.NonEctoFakeApp.User do
+    def subjects(user), do: user.roles
   end
 end

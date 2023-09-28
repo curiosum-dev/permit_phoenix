@@ -2,18 +2,23 @@ defmodule Permit.NonEctoLiveViewTest.HooksLive do
   use Phoenix.LiveView, namespace: Permit
 
   alias Permit.NonEctoFakeApp.{Authorization, Item, User}
+  alias Permit.NonEctoFakeApp.Item.Context
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
     resource_module: Item
 
   @impl true
-  def loader(_, _, _, %{"id" => id}) do
-    Permit.NonEctoFakeApp.Item.Context.get_item(id)
+  def loader(%{params: %{"id" => id}}) do
+    Context.get_item(id)
+  end
+
+  def loader(%{action: :index}) do
+    Context.list_items()
   end
 
   @impl true
-  def handle_unauthorized(socket), do: {:cont, assign(socket, :unauthorized, true)}
+  def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}
 
   @impl true
   def fetch_subject(_socket, session) do

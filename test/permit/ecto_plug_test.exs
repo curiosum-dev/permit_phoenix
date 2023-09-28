@@ -1,11 +1,12 @@
 defmodule Permit.EctoPlugTest do
+  @moduledoc false
   use Permit.RepoCase, async: true
   use Permit.EctoPlugTest.RouterHelper
 
   alias Permit.EctoFakeApp.{
     Item,
-    Router,
-    Repo
+    Repo,
+    Router
   }
 
   setup do
@@ -92,7 +93,7 @@ defmodule Permit.EctoPlugTest do
 
     test "raises error when condition is defined using function", %{conn: conn} do
       assert_raise Plug.Conn.WrapperError,
-                   ~r/Permit.Ecto.Permissions.UnconvertibleConditionError/,
+                   ~r/Permit.Ecto.UnconvertibleConditionError/,
                    fn -> call(conn, :get, "/items/1") end
     end
   end

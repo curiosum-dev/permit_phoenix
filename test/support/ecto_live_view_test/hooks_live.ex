@@ -2,13 +2,14 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   use Phoenix.LiveView, namespace: Permit
 
   alias Permit.EctoFakeApp.{Authorization, Item, User}
+  alias Permit.EctoFakeApp.Item.Context
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
     resource_module: Item
 
-  @impl true
-  def base_query(_action, Item, _subject, params) do
+  @impl Permit.Phoenix.LiveView
+  def base_query(%{resource_module: Item, params: params}) do
     case params do
       %{"id" => id} ->
         id =
@@ -18,17 +19,17 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
             id
           end
 
-        Permit.EctoFakeApp.Item.Context.filter_by_id(Item, id)
+        Context.filter_by_id(Item, id)
 
       %{} ->
         Item
     end
   end
 
-  @impl true
-  def handle_unauthorized(socket), do: {:cont, assign(socket, :unauthorized, true)}
+  @impl Permit.Phoenix.LiveView
+  def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}
 
-  @impl true
+  @impl Permit.Phoenix.LiveView
   def fetch_subject(_socket, session) do
     case session["token"] do
       "valid_token" -> %User{id: 1, roles: session["roles"] || []}
