@@ -72,7 +72,7 @@ defmodule Permit.Phoenix.Controller do
   """
   @callback resource_module() :: Types.resource_module()
 
-  with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+  if :ok == Application.ensure_loaded(:permit_ecto) do
     @doc ~S"""
     Creates the basis for an Ecto query constructed by `Permit.Ecto` based on controller action, resource module, subject (typically `:current_user`) and controller params.
 
@@ -209,10 +209,10 @@ defmodule Permit.Phoenix.Controller do
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.conn()) :: atom()
 
   @optional_callbacks [
-                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+                        if(:ok == Application.ensure_loaded(:permit_ecto),
                           do: {:base_query, 1}
                         ),
-                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+                        if(:ok == Application.ensure_loaded(:permit_ecto),
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
@@ -228,10 +228,6 @@ defmodule Permit.Phoenix.Controller do
   defmacro __using__(opts) do
     quote generated: true do
       require Logger
-
-      # with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
-      #   require Ecto.Query
-      # end
 
       @behaviour unquote(__MODULE__)
 
@@ -264,7 +260,7 @@ defmodule Permit.Phoenix.Controller do
         unquote(__MODULE__).except(unquote(opts))
       end
 
-      with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+      if :ok == Application.ensure_loaded(:permit_ecto) do
         @impl true
         def base_query(%{
               action: action,
@@ -312,10 +308,10 @@ defmodule Permit.Phoenix.Controller do
 
       defoverridable(
         [
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+          if(:ok == Application.ensure_loaded(:permit_ecto),
             do: {:base_query, 1}
           ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+          if(:ok == Application.ensure_loaded(:permit_ecto),
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
@@ -334,10 +330,10 @@ defmodule Permit.Phoenix.Controller do
       plug(
         Permit.Phoenix.Plug,
         [
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+          if(:ok == Application.ensure_loaded(:permit_ecto),
             do: {:base_query, &__MODULE__.base_query/1}
           ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+          if(:ok == Application.ensure_loaded(:permit_ecto),
             do: {:finalize_query, &__MODULE__.finalize_query/2}
           ),
           authorization_module: &__MODULE__.authorization_module/0,
@@ -392,7 +388,7 @@ defmodule Permit.Phoenix.Controller do
     end
   end
 
-  with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+  if :ok == Application.ensure_loaded(:permit_ecto) do
     @doc false
     def base_query(
           %{
