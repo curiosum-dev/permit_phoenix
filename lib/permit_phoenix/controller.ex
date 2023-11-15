@@ -404,11 +404,10 @@ defmodule Permit.Phoenix.Controller do
 
       case params do
         %{^param => id} ->
-          resource_module
-          |> Permit.Ecto.filter_by_field(field, id)
+          apply(Permit.Ecto, :filter_by_field, [resource_module, field, id])
 
         _ ->
-          Permit.Ecto.from(resource_module)
+          apply(Permit.Ecto, :from, [resource_module])
       end
     end
 
