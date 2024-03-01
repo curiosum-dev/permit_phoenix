@@ -165,6 +165,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   @spec preload_and_authorize(PhoenixTypes.socket(), map()) ::
           PhoenixTypes.live_authorization_result()
   defp preload_and_authorize(socket, params) do
+    use_loader? = socket.view.use_loader?()
     authorization_module = socket.view.authorization_module()
     actions_module = authorization_module.actions_module()
     resolver_module = authorization_module.resolver_module()
@@ -194,7 +195,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
              loader: loader,
              socket: socket,
              base_query: base_query,
-             finalize_query: finalize_query
+             finalize_query: finalize_query,
+             use_loader?: use_loader?
            }
          ) do
       {:authorized, records} ->
