@@ -33,6 +33,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 3
     end
 
     test "can do :edit on items", %{conn: conn} do
@@ -81,6 +82,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 1
     end
 
     test "can do :show on owned item", %{conn: conn} do
@@ -148,6 +150,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 3
     end
 
     test "cannot do :edit", %{conn: conn} do
@@ -188,6 +191,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 1
     end
 
     test "can do :edit on item 1", %{conn: conn} do
@@ -269,6 +273,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 2
     end
 
     test "can do :edit on item 1", %{conn: conn} do
@@ -348,6 +353,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 1
     end
 
     test "cant do :edit on item 1", %{conn: conn} do
