@@ -32,7 +32,7 @@ defmodule Permit.EctoPlugTest do
     end
 
     test "raises when record does not exist", %{conn: conn} do
-      assert_raise Plug.Conn.WrapperError, ~r/Ecto\.NoResultsError/, fn ->
+      assert_raise Plug.Conn.WrapperError, ~r/Expected at least one/, fn ->
         call(conn, :get, "/items/0")
       end
     end
