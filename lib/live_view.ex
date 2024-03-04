@@ -58,7 +58,7 @@ defmodule Permit.Phoenix.LiveView do
   @callback fallback_path(Types.action_group(), PhoenixTypes.socket()) :: binary()
   @callback except() :: list(Types.action_group())
   @callback loader(Types.resolution_context()) :: Types.object() | nil
-
+  @callback handle_not_found(PhoenixTypes.socket()) :: PhoenixTypes.hook_outcome()
   @callback id_param_name(Types.action_group(), PhoenixTypes.socket()) :: binary()
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
 
@@ -79,7 +79,8 @@ defmodule Permit.Phoenix.LiveView do
                         except: 0,
                         loader: 1,
                         id_param_name: 2,
-                        id_struct_field_name: 2
+                        id_struct_field_name: 2,
+                        handle_not_found: 1
                       ]
                       |> Enum.filter(& &1)
 
@@ -103,6 +104,11 @@ defmodule Permit.Phoenix.LiveView do
         do:
           unquote(opts[:authorization_module]) ||
             raise(":authorization_module option must be given when using LiveViewAuthorization")
+
+      @impl true
+      def handle_not_found(socket) do
+        unquote(__MODULE__).handle_not_found(socket, unquote(opts))
+      end
 
       @impl true
       def resource_module, do: unquote(opts[:resource_module])
@@ -182,7 +188,8 @@ defmodule Permit.Phoenix.LiveView do
           except: 0,
           loader: 1,
           id_param_name: 2,
-          id_struct_field_name: 2
+          id_struct_field_name: 2,
+          handle_not_found: 1
         ]
         |> Enum.filter(& &1)
       )
@@ -224,6 +231,10 @@ defmodule Permit.Phoenix.LiveView do
       fun when is_function(fun) -> fun.(action, socket)
       handle_unauthorized -> handle_unauthorized
     end
+  end
+
+  def handle_not_found(_socket, _opts) do
+    raise "Expected at least one result but got none"
   end
 
   @doc false
