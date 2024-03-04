@@ -32,10 +32,9 @@ defmodule Permit.EctoPlugWithLoaderTest do
       assert %Item{id: 1} = conn.assigns[:loaded_resource]
     end
 
-    test "raises when record does not exist", %{conn: conn} do
-      assert_raise Plug.Conn.WrapperError, ~r/NoResultsError/, fn ->
-        call(conn, :get, "/blogs/0")
-      end
+    test "should assign flash error", %{conn: conn} do
+      conn = call(conn, :get, "/blogs/10")
+      assert conn.assigns.flash["error"] == "Record not found"
     end
   end
 

@@ -2,7 +2,7 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepoWithLoader do
   @moduledoc false
   use Phoenix.Controller
 
-  alias Permit.EctoFakeApp.{Authorization, Item, NoResultsError}
+  alias Permit.EctoFakeApp.{Authorization, Item}
 
   use Permit.Phoenix.Controller,
     authorization_module: Authorization,
@@ -20,7 +20,11 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepoWithLoader do
   def loader(%{params: %{"id" => "1"}}), do: @item1
   def loader(%{params: %{"id" => "2"}}), do: @item2
   def loader(%{params: %{"id" => "3"}}), do: @item3
-  def loader(_), do: raise(NoResultsError)
+  def loader(_), do: nil
+
+  def handle_not_found(conn) do
+    put_flash(conn, :error, "Record not found")
+  end
 
   def index(conn, _params), do: text(conn, "listing all items")
   def show(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))

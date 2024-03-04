@@ -62,6 +62,12 @@ defmodule Permit.EctoLiveViewTest do
       assert :unauthorized not in Map.keys(assigns)
       assert :loaded_resources not in Map.keys(assigns)
     end
+
+    test "raises when record does not exist", %{conn: conn} do
+      assert_raise Plug.Conn.WrapperError, ~r/Expected at least one result/, fn ->
+        live(conn, "/items/0")
+      end
+    end
   end
 
   describe "owner" do
