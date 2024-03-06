@@ -84,6 +84,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   alias Permit.Phoenix.Types, as: PhoenixTypes
 
+  @action_mapping %{"delete" => :delete}
+
   # These two modules will be checked for the existence of the assign/3 function.
   # If neither exists (no LiveView dependency in a project), no failure happens.
   Code.ensure_loaded(Phoenix.LiveView)
@@ -114,15 +116,17 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   @spec on_mount(term(), map(), map(), PhoenixTypes.socket()) :: PhoenixTypes.hook_outcome()
   def on_mount(_opt, params, session, socket) do
+    action = socket.assigns.live_action
+
     socket
     |> attach_params_hook(params, session)
-    |> authenticate_and_authorize!(session, params)
+    |> authenticate_and_authorize!(action, session, params)
   end
 
-  defp authenticate_and_authorize!(socket, session, params) do
+  defp authenticate_and_authorize!(socket, action, session, params) do
     socket
     |> authenticate(session)
-    |> authorize(params)
+    |> authorize(action, params)
     |> respond()
   end
 
@@ -132,24 +136,23 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     live_view_assign(socket, :current_user, current_user)
   end
 
-  @spec authorize(PhoenixTypes.socket(), map()) :: PhoenixTypes.live_authorization_result()
-  defp authorize(socket, params) do
-    %{assigns: %{live_action: live_action}} = socket
-
-    if live_action in socket.view.preload_actions() do
-      preload_and_authorize(socket, params)
+  @spec authorize(PhoenixTypes.socket(), Types.action_group(), map()) ::
+          PhoenixTypes.live_authorization_result()
+  defp authorize(socket, action, params) do
+    if action in socket.view.preload_actions() do
+      preload_and_authorize(socket, action, params)
     else
-      just_authorize(socket)
+      just_authorize(socket, action)
     end
   end
 
-  @spec just_authorize(PhoenixTypes.socket()) :: PhoenixTypes.live_authorization_result()
-  defp just_authorize(socket) do
+  @spec just_authorize(PhoenixTypes.socket(), Types.action_group()) ::
+          PhoenixTypes.live_authorization_result()
+  defp just_authorize(socket, action) do
     authorization_module = socket.view.authorization_module()
     resource_module = socket.view.resource_module()
     resolver_module = authorization_module.resolver_module()
     subject = socket.assigns.current_user
-    action = socket.assigns.live_action
 
     case resolver_module.authorized?(
            subject,
@@ -162,9 +165,9 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     end
   end
 
-  @spec preload_and_authorize(PhoenixTypes.socket(), map()) ::
+  @spec preload_and_authorize(PhoenixTypes.socket(), Types.action_group(), map()) ::
           PhoenixTypes.live_authorization_result()
-  defp preload_and_authorize(socket, params) do
+  defp preload_and_authorize(socket, action, params) do
     use_loader? = socket.view.use_loader?()
     authorization_module = socket.view.authorization_module()
     actions_module = authorization_module.actions_module()
@@ -175,7 +178,6 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     loader = &socket.view.loader/1
     finalize_query = &socket.view.finalize_query/2
     subject = socket.assigns.current_user
-    action = socket.assigns.live_action
     singular? = action in actions_module.singular_actions()
 
     {load_key, other_key, auth_function} =
@@ -229,7 +231,16 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     |> Phoenix.LiveView.attach_hook(:params_authorization, :handle_params, fn params,
                                                                               _uri,
                                                                               socket ->
-      authenticate_and_authorize!(socket, session, params)
+      authenticate_and_authorize!(socket, socket.assigns.live_action, session, params)
+    end)
+    |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
+                                                                            params,
+                                                                            socket ->
+      if action = @action_mapping[event] do
+        authenticate_and_authorize!(socket, action, session, params)
+      else
+        {:cont, socket}
+      end
     end)
   end
 end

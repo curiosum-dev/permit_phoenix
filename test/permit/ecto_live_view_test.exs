@@ -19,6 +19,16 @@ defmodule Permit.EctoLiveViewTest do
   describe "admin" do
     setup [:admin_role, :init_session]
 
+    test "should not delegate to unauthorized handler when authorized", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/items")
+
+      lv |> element("#delete") |> render_click()
+
+      assigns = get_assigns(lv)
+
+      assert :unauthorized not in Map.keys(assigns)
+    end
+
     test "sets :current_user assign", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
 
@@ -141,6 +151,16 @@ defmodule Permit.EctoLiveViewTest do
 
   describe "inspector" do
     setup [:inspector_role, :init_session]
+
+    test "delegates to unauthorized handler when unauthorized", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/items")
+
+      lv |> element("#delete") |> render_click()
+
+      assigns = get_assigns(lv)
+
+      assert :unauthorized in Map.keys(assigns)
+    end
 
     test "sets :current_user assign", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
