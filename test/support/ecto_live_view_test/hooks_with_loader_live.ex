@@ -1,30 +1,22 @@
-defmodule Permit.EctoLiveViewTest.HooksLive do
+defmodule Permit.EctoLiveViewTest.HooksWithLoaderLive do
   use Phoenix.LiveView, namespace: Permit
 
   alias Permit.EctoFakeApp.{Authorization, Item, User}
-  alias Permit.EctoFakeApp.Item.Context
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
-    resource_module: Item
+    resource_module: Item,
+    use_loader?: true
 
-  @impl Permit.Phoenix.LiveView
-  def base_query(%{resource_module: Item, params: params}) do
-    case params do
-      %{"id" => id} ->
-        id =
-          if is_bitstring(id) do
-            String.to_integer(id)
-          else
-            id
-          end
+  @item1 %Item{id: 1, owner_id: 1, permission_level: 1}
+  @item2 %Item{id: 2, owner_id: 2, permission_level: 2, thread_name: "dmt"}
+  @item3 %Item{id: 3, owner_id: 3, permission_level: 3}
 
-        Context.filter_by_id(Item, id)
-
-      %{} ->
-        Item
-    end
-  end
+  def loader(%{action: :index}), do: [@item1, @item2, @item3]
+  def loader(%{params: %{"id" => "1"}}), do: @item1
+  def loader(%{params: %{"id" => "2"}}), do: @item2
+  def loader(%{params: %{"id" => "3"}}), do: @item3
+  def loader(_), do: []
 
   @impl Permit.Phoenix.LiveView
   def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}
@@ -41,9 +33,8 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   @spec render(any) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
-    <button id="navigate_show" phx-click="navigate" phx-value-url="/items/1">show</button>
-    <button id="navigate_edit" phx-click="navigate" phx-value-url="/items/1/edit">edit</button>
-    <button id="delete" phx-click="delete" phx-value-id="2">delete</button>
+    <button id="navigate_show" phx-click="navigate" phx-value-url="/books/1">show</button>
+    <button id="navigate_edit" phx-click="navigate" phx-value-url="/books/1/edit">edit</button>
     """
   end
 
@@ -55,10 +46,6 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   @impl true
   def handle_event("navigate", %{"url" => url}, socket) do
     {:noreply, push_patch(socket, to: url)}
-  end
-
-  def handle_event("delete", %{"id" => _id}, socket) do
-    {:noreply, socket}
   end
 
   @impl true

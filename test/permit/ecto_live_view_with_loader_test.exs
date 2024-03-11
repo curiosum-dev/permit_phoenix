@@ -1,11 +1,11 @@
-defmodule Permit.EctoLiveViewTest do
+defmodule Permit.EctoLiveViewWithLoaderTest do
   @moduledoc false
   use Permit.RepoCase
 
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
-  alias Permit.EctoLiveViewTest.{Endpoint, HooksLive}
+  alias Permit.EctoLiveViewTest.{Endpoint, HooksWithLoaderLive}
   alias Permit.EctoFakeApp.{Item, Repo, User}
 
   @endpoint Endpoint
@@ -19,18 +19,8 @@ defmodule Permit.EctoLiveViewTest do
   describe "admin" do
     setup [:admin_role, :init_session]
 
-    test "should not delegate to unauthorized handler when authorized", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      lv |> element("#delete") |> render_click()
-
-      assigns = get_assigns(lv)
-
-      assert :unauthorized not in Map.keys(assigns)
-    end
-
     test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
@@ -38,15 +28,16 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 3
     end
 
     test "can do :edit on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -55,7 +46,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :show", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -64,7 +55,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/books/new")
 
       assigns = get_assigns(lv)
 
@@ -78,7 +69,7 @@ defmodule Permit.EctoLiveViewTest do
     setup [:owner_role, :init_session]
 
     test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
@@ -86,15 +77,16 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 1
     end
 
     test "can do :show on owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -103,7 +95,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cannot do :show on non-owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -112,7 +104,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :edit on owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -121,7 +113,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cannot do :edit on non-owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2/edit")
+      {:ok, lv, _html} = live(conn, "/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -131,7 +123,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/books/new")
 
       assigns = get_assigns(lv)
 
@@ -141,29 +133,11 @@ defmodule Permit.EctoLiveViewTest do
     end
   end
 
-  describe "function_owner" do
-    setup [:function_owner_role, :init_session]
-
-    test "raises error when condition is given as a function", %{conn: conn} do
-      assert_raise_unconvertible_condition_error(conn, "/items/1")
-    end
-  end
-
   describe "inspector" do
     setup [:inspector_role, :init_session]
 
-    test "delegates to unauthorized handler when unauthorized", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      lv |> element("#delete") |> render_click()
-
-      assigns = get_assigns(lv)
-
-      assert :unauthorized in Map.keys(assigns)
-    end
-
     test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
@@ -171,15 +145,16 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 3
     end
 
     test "cannot do :edit", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -189,7 +164,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :show", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -198,7 +173,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cannot do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/books/new")
 
       assigns = get_assigns(lv)
 
@@ -211,15 +186,16 @@ defmodule Permit.EctoLiveViewTest do
     setup [:moderator_1_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 1
     end
 
     test "can do :edit on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -228,7 +204,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :show on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -237,7 +213,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :edit on item 2", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2/edit")
+      {:ok, lv, _html} = live(conn, "/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -247,7 +223,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2")
+      {:ok, lv, _html} = live(conn, "/books/2")
 
       assigns = get_assigns(lv)
 
@@ -257,7 +233,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/3/edit")
+      {:ok, lv, _html} = live(conn, "/books/3/edit")
 
       assigns = get_assigns(lv)
 
@@ -267,7 +243,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/3")
+      {:ok, lv, _html} = live(conn, "/books/3")
 
       assigns = get_assigns(lv)
 
@@ -277,7 +253,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/books/new")
 
       assigns = get_assigns(lv)
 
@@ -292,15 +268,16 @@ defmodule Permit.EctoLiveViewTest do
     setup [:moderator_2_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 2
     end
 
     test "can do :edit on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -309,7 +286,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :show on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -318,7 +295,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :edit on item 2", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2/edit")
+      {:ok, lv, _html} = live(conn, "/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -327,7 +304,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2")
+      {:ok, lv, _html} = live(conn, "/books/2")
 
       assigns = get_assigns(lv)
 
@@ -336,7 +313,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/3/edit")
+      {:ok, lv, _html} = live(conn, "/books/3/edit")
 
       assigns = get_assigns(lv)
 
@@ -346,7 +323,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/3")
+      {:ok, lv, _html} = live(conn, "/books/3")
 
       assigns = get_assigns(lv)
 
@@ -356,7 +333,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/books/new")
 
       assigns = get_assigns(lv)
 
@@ -371,15 +348,16 @@ defmodule Permit.EctoLiveViewTest do
     setup [:dmt_thread_moderator_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
+      assert Enum.count(assigns[:loaded_resources]) == 1
     end
 
     test "cant do :edit on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1/edit")
+      {:ok, lv, _html} = live(conn, "/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -389,7 +367,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/1")
+      {:ok, lv, _html} = live(conn, "/books/1")
 
       assigns = get_assigns(lv)
 
@@ -399,7 +377,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :edit on item 2", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2/edit")
+      {:ok, lv, _html} = live(conn, "/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -408,7 +386,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/2")
+      {:ok, lv, _html} = live(conn, "/books/2")
 
       assigns = get_assigns(lv)
 
@@ -417,7 +395,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/3/edit")
+      {:ok, lv, _html} = live(conn, "/books/3/edit")
 
       assigns = get_assigns(lv)
 
@@ -427,7 +405,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "cant do :show on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/3")
+      {:ok, lv, _html} = live(conn, "/books/3")
 
       assigns = get_assigns(lv)
 
@@ -437,7 +415,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/books/new")
 
       assigns = get_assigns(lv)
 
@@ -452,7 +430,7 @@ defmodule Permit.EctoLiveViewTest do
     setup [:inspector_role, :init_session]
 
     test "is successful, authorizes and preloads resource", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       assert (lv |> get_assigns())[:loaded_resources]
       refute (lv |> get_assigns())[:loaded_resource]
@@ -464,7 +442,7 @@ defmodule Permit.EctoLiveViewTest do
     end
 
     test "delegates to unauthorized handler when unauthorized", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/books")
 
       lv |> element("#navigate_edit") |> render_click()
 
@@ -514,7 +492,7 @@ defmodule Permit.EctoLiveViewTest do
   end
 
   defp get_assigns(lv) do
-    HooksLive.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
+    HooksWithLoaderLive.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
   end
 
   defp assert_raise_unconvertible_condition_error(conn, url) do

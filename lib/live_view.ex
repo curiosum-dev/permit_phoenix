@@ -47,6 +47,7 @@ defmodule Permit.Phoenix.LiveView do
   with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
+    @callback use_loader?() :: boolean()
   end
 
   @callback handle_unauthorized(Types.action_group(), PhoenixTypes.socket()) ::
@@ -67,6 +68,9 @@ defmodule Permit.Phoenix.LiveView do
                         ),
                         if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
                           do: {:finalize_query, 2}
+                        ),
+                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+                          do: {:use_loader?, 0}
                         ),
                         handle_unauthorized: 2,
                         preload_actions: 0,
@@ -138,6 +142,11 @@ defmodule Permit.Phoenix.LiveView do
         @impl true
         def finalize_query(query, resolution_context),
           do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
+
+        @impl true
+        def use_loader? do
+          unquote(__MODULE__).use_loader?(unquote(opts))
+        end
       end
 
       @impl true
@@ -162,6 +171,9 @@ defmodule Permit.Phoenix.LiveView do
           ),
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
             do: {:finalize_query, 2}
+          ),
+          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+            do: {:use_loader?, 0}
           ),
           handle_unauthorized: 2,
           preload_actions: 0,
@@ -249,6 +261,14 @@ defmodule Permit.Phoenix.LiveView do
 
     @doc false
     def finalize_query(query, %{}, _opts), do: query
+
+    def use_loader?(opts) do
+      if opts[:use_loader?] do
+        true
+      else
+        false
+      end
+    end
   end
 
   @doc false

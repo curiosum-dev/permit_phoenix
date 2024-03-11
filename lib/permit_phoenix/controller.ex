@@ -121,6 +121,7 @@ defmodule Permit.Phoenix.Controller do
         end
     """
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
+    @callback use_loader?() :: boolean()
   end
 
   @doc ~S"""
@@ -215,6 +216,9 @@ defmodule Permit.Phoenix.Controller do
                         if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
                           do: {:finalize_query, 2}
                         ),
+                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+                          do: {:use_loader?, 0}
+                        ),
                         handle_unauthorized: 2,
                         preload_actions: 0,
                         fallback_path: 2,
@@ -287,6 +291,11 @@ defmodule Permit.Phoenix.Controller do
         @impl true
         def finalize_query(query, resolution_context),
           do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
+
+        @impl true
+        def use_loader? do
+          unquote(__MODULE__).use_loader?(unquote(opts))
+        end
       end
 
       @impl true
@@ -316,6 +325,9 @@ defmodule Permit.Phoenix.Controller do
           ),
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
             do: {:finalize_query, 2}
+          ),
+          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+            do: {:use_loader?, 0}
           ),
           handle_unauthorized: 2,
           preload_actions: 0,
@@ -437,6 +449,14 @@ defmodule Permit.Phoenix.Controller do
 
     @doc false
     def finalize_query(query, %{}, _), do: query
+
+    def use_loader?(opts) do
+      if opts[:use_loader?] do
+        true
+      else
+        false
+      end
+    end
   end
 
   @doc false
