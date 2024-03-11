@@ -229,11 +229,10 @@ defmodule Permit.Phoenix.Controller do
     quote generated: true do
       require Logger
 
-      # with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
-      #   require Ecto.Query
-      # end
-
       @behaviour unquote(__MODULE__)
+      @on_definition {unquote(__MODULE__), :__on_definition__}
+      @before_compile unquote(__MODULE__)
+      @controller_actions []
 
       @impl true
       def handle_unauthorized(action, conn) do
@@ -331,28 +330,48 @@ defmodule Permit.Phoenix.Controller do
         |> Enum.filter(& &1)
       )
 
-      plug(
-        Permit.Phoenix.Plug,
-        [
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:base_query, &__MODULE__.base_query/1}
-          ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:finalize_query, &__MODULE__.finalize_query/2}
-          ),
-          authorization_module: &__MODULE__.authorization_module/0,
-          resource_module: &__MODULE__.resource_module/0,
-          preload_actions: &__MODULE__.preload_actions/0,
-          fallback_path: &__MODULE__.fallback_path/2,
-          except: &__MODULE__.except/0,
-          fetch_subject: &__MODULE__.fetch_subject/1,
-          handle_unauthorized: &__MODULE__.handle_unauthorized/2,
-          loader: &__MODULE__.loader/1,
-          id_param_name: &__MODULE__.id_param_name/2,
-          id_struct_field_name: &__MODULE__.id_struct_field_name/2
-        ]
-        |> Enum.filter(& &1)
-      )
+      plug(:permit_phoenix_plug)
+    end
+  end
+
+  def __on_definition__(env, _kind, name, _args, _guards, _body) do
+    resource_module = Module.get_attribute(env.module, :resource_module)
+    controller_actions = Module.get_attribute(env.module, :controller_actions)
+
+    Module.put_attribute(env.module, :controller_actions, [
+      {name, resource_module} | controller_actions
+    ])
+
+    Module.delete_attribute(env.module, :resource_module)
+  end
+
+  defmacro __before_compile__(_env) do
+    quote do
+      def permit_phoenix_plug(conn, _opts) do
+        Permit.Phoenix.Plug.call(
+          conn,
+          [
+            if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+              do: {:base_query, &__MODULE__.base_query/1}
+            ),
+            if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+              do: {:finalize_query, &__MODULE__.finalize_query/2}
+            ),
+            authorization_module: &__MODULE__.authorization_module/0,
+            resource_module: &__MODULE__.resource_module/0,
+            preload_actions: &__MODULE__.preload_actions/0,
+            fallback_path: &__MODULE__.fallback_path/2,
+            except: &__MODULE__.except/0,
+            fetch_subject: &__MODULE__.fetch_subject/1,
+            handle_unauthorized: &__MODULE__.handle_unauthorized/2,
+            loader: &__MODULE__.loader/1,
+            id_param_name: &__MODULE__.id_param_name/2,
+            id_struct_field_name: &__MODULE__.id_struct_field_name/2,
+            controller_actions: @controller_actions
+          ]
+          |> Enum.filter(& &1)
+        )
+      end
     end
   end
 
