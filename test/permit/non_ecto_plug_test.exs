@@ -16,7 +16,7 @@ defmodule Permit.NonEctoPlugTest do
 
     test "authorizes :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
-      assert conn.resp_body == "listing all items"
+      assert conn.resp_body == "listing all users"
     end
 
     test "authorizes :show action", %{conn: conn} do
