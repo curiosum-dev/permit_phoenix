@@ -121,7 +121,6 @@ defmodule Permit.Phoenix.Controller do
         end
     """
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
-    @callback use_loader?() :: boolean()
   end
 
   @doc ~S"""
@@ -216,9 +215,6 @@ defmodule Permit.Phoenix.Controller do
                         if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
                           do: {:finalize_query, 2}
                         ),
-                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-                          do: {:use_loader?, 0}
-                        ),
                         handle_unauthorized: 2,
                         preload_actions: 0,
                         fallback_path: 2,
@@ -233,11 +229,9 @@ defmodule Permit.Phoenix.Controller do
     quote generated: true do
       require Logger
 
-      # with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
-      #   require Ecto.Query
-      # end
-
       @behaviour unquote(__MODULE__)
+      @before_compile unquote(__MODULE__)
+      @opts unquote(opts)
 
       @impl true
       def handle_unauthorized(action, conn) do
@@ -292,16 +286,6 @@ defmodule Permit.Phoenix.Controller do
         @impl true
         def finalize_query(query, resolution_context),
           do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
-
-        @impl true
-        def use_loader? do
-          unquote(__MODULE__).use_loader?(unquote(opts))
-        end
-      end
-
-      @impl true
-      def loader(resolution_context) do
-        unquote(__MODULE__).loader(resolution_context, unquote(opts))
       end
 
       @impl true
@@ -327,47 +311,61 @@ defmodule Permit.Phoenix.Controller do
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
             do: {:finalize_query, 2}
           ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:use_loader?, 0}
-          ),
           handle_unauthorized: 2,
           preload_actions: 0,
           fallback_path: 2,
           resource_module: 0,
           except: 0,
           fetch_subject: 1,
-          loader: 1,
           id_param_name: 2,
           id_struct_field_name: 2
         ]
         |> Enum.filter(& &1)
       )
 
-      plug(
-        Permit.Phoenix.Plug,
-        [
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:base_query, &__MODULE__.base_query/1}
-          ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:finalize_query, &__MODULE__.finalize_query/2}
-          ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:use_loader?, &__MODULE__.use_loader?/0}
-          ),
-          authorization_module: &__MODULE__.authorization_module/0,
-          resource_module: &__MODULE__.resource_module/0,
-          preload_actions: &__MODULE__.preload_actions/0,
-          fallback_path: &__MODULE__.fallback_path/2,
-          except: &__MODULE__.except/0,
-          fetch_subject: &__MODULE__.fetch_subject/1,
-          handle_unauthorized: &__MODULE__.handle_unauthorized/2,
-          loader: &__MODULE__.loader/1,
-          id_param_name: &__MODULE__.id_param_name/2,
-          id_struct_field_name: &__MODULE__.id_struct_field_name/2
-        ]
-        |> Enum.filter(& &1)
-      )
+      plug(:permit_phoenix_plug)
+    end
+  end
+
+  defmacro __before_compile__(_env) do
+    quote do
+      if Module.defines?(__MODULE__, {:loader, 1}) do
+        @loader_defined? true
+      else
+        @loader_defined? false
+        @impl true
+        def loader(resolution_context) do
+          unquote(__MODULE__).loader(resolution_context, @opts)
+        end
+      end
+
+      def permit_phoenix_plug(conn, _opts) do
+        Permit.Phoenix.Plug.call(
+          conn,
+          [
+            if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+              do: {:base_query, &__MODULE__.base_query/1}
+            ),
+            if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+              do: {:finalize_query, &__MODULE__.finalize_query/2}
+            ),
+            if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+              do: {:use_loader?, @loader_defined?}
+            ),
+            authorization_module: &__MODULE__.authorization_module/0,
+            resource_module: &__MODULE__.resource_module/0,
+            preload_actions: &__MODULE__.preload_actions/0,
+            fallback_path: &__MODULE__.fallback_path/2,
+            except: &__MODULE__.except/0,
+            fetch_subject: &__MODULE__.fetch_subject/1,
+            handle_unauthorized: &__MODULE__.handle_unauthorized/2,
+            loader: &__MODULE__.loader/1,
+            id_param_name: &__MODULE__.id_param_name/2,
+            id_struct_field_name: &__MODULE__.id_struct_field_name/2
+          ]
+          |> Enum.filter(& &1)
+        )
+      end
     end
   end
 
@@ -433,14 +431,6 @@ defmodule Permit.Phoenix.Controller do
 
     @doc false
     def finalize_query(query, %{}, _), do: query
-
-    def use_loader?(opts) do
-      if opts[:use_loader?] do
-        true
-      else
-        false
-      end
-    end
   end
 
   @doc false
