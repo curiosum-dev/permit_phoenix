@@ -5,13 +5,13 @@ defmodule Permit.EctoLiveViewTest.HooksWithLoaderLive do
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
-    resource_module: Item,
-    use_loader?: true
+    resource_module: Item
 
   @item1 %Item{id: 1, owner_id: 1, permission_level: 1}
   @item2 %Item{id: 2, owner_id: 2, permission_level: 2, thread_name: "dmt"}
   @item3 %Item{id: 3, owner_id: 3, permission_level: 3}
 
+  @impl Permit.Phoenix.LiveView
   def loader(%{action: :index}), do: [@item1, @item2, @item3]
   def loader(%{params: %{"id" => "1"}}), do: @item1
   def loader(%{params: %{"id" => "2"}}), do: @item2
