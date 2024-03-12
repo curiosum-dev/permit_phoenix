@@ -494,12 +494,4 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
   defp get_assigns(lv) do
     HooksWithLoaderLive.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
   end
-
-  defp assert_raise_unconvertible_condition_error(conn, url) do
-    assert_raise Plug.Conn.WrapperError,
-                 ~r/Permit.Ecto.UnconvertibleConditionError/,
-                 fn ->
-                   live(conn, url)
-                 end
-  end
 end

@@ -47,7 +47,6 @@ defmodule Permit.Phoenix.LiveView do
   with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
-    @callback use_loader?() :: boolean()
   end
 
   @callback handle_unauthorized(Types.action_group(), PhoenixTypes.socket()) ::
@@ -69,9 +68,6 @@ defmodule Permit.Phoenix.LiveView do
                         if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
                           do: {:finalize_query, 2}
                         ),
-                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-                          do: {:use_loader?, 0}
-                        ),
                         handle_unauthorized: 2,
                         preload_actions: 0,
                         fallback_path: 2,
@@ -82,12 +78,6 @@ defmodule Permit.Phoenix.LiveView do
                         id_struct_field_name: 2
                       ]
                       |> Enum.filter(& &1)
-
-  defmacro __before_compile__(_env) do
-    quote do
-      def get_events, do: @events
-    end
-  end
 
   defmacro __using__(opts) do
     quote generated: true do
@@ -100,6 +90,7 @@ defmodule Permit.Phoenix.LiveView do
       @behaviour unquote(__MODULE__)
       @on_definition {unquote(__MODULE__), :__on_definition__}
       @before_compile unquote(__MODULE__)
+      @opts unquote(opts)
       @events []
 
       @impl true
@@ -151,16 +142,6 @@ defmodule Permit.Phoenix.LiveView do
         @impl true
         def finalize_query(query, resolution_context),
           do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
-
-        @impl true
-        def use_loader? do
-          unquote(__MODULE__).use_loader?(unquote(opts))
-        end
-      end
-
-      @impl true
-      def loader(resolution_context) do
-        unquote(__MODULE__).loader(resolution_context, unquote(opts))
       end
 
       @impl true
@@ -181,15 +162,11 @@ defmodule Permit.Phoenix.LiveView do
           if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
             do: {:finalize_query, 2}
           ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
-            do: {:use_loader?, 0}
-          ),
           handle_unauthorized: 2,
           preload_actions: 0,
           fallback_path: 2,
           resource_module: 0,
           except: 0,
-          loader: 1,
           id_param_name: 2,
           id_struct_field_name: 2
         ]
@@ -209,6 +186,22 @@ defmodule Permit.Phoenix.LiveView do
   end
 
   def __on_definition__(_env, _kind, _name, _args, _guards, _body), do: nil
+
+  defmacro __before_compile__(_env) do
+    quote do
+      def get_events, do: @events
+
+      if Module.defines?(__MODULE__, {:loader, 1}) do
+        def use_loader?, do: true
+      else
+        def use_loader?, do: false
+        @impl true
+        def loader(resolution_context) do
+          unquote(__MODULE__).loader(resolution_context, @opts)
+        end
+      end
+    end
+  end
 
   defp extract_action([action, _, _]), do: action
   defp extract_action(_), do: nil
@@ -285,14 +278,6 @@ defmodule Permit.Phoenix.LiveView do
 
     @doc false
     def finalize_query(query, %{}, _opts), do: query
-
-    def use_loader?(opts) do
-      if opts[:use_loader?] do
-        true
-      else
-        false
-      end
-    end
   end
 
   @doc false
