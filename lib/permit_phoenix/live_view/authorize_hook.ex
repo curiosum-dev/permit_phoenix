@@ -146,7 +146,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   @spec just_authorize(PhoenixTypes.socket()) :: PhoenixTypes.live_authorization_result()
   defp just_authorize(socket) do
     authorization_module = socket.view.authorization_module()
-    resource_module = socket.view.resource_module()
+    events = socket.view.get_events()
+    resource_module = extract_resource_module(events, action, socket.view.resource_module())
     resolver_module = authorization_module.resolver_module()
     subject = socket.assigns.current_user
     action = socket.assigns.live_action
@@ -168,7 +169,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     authorization_module = socket.view.authorization_module()
     actions_module = authorization_module.actions_module()
     resolver_module = authorization_module.resolver_module()
-    resource_module = socket.view.resource_module()
+    events = socket.view.get_events()
+    resource_module = extract_resource_module(events, action, socket.view.resource_module())
 
     base_query = &socket.view.base_query/1
     loader = &socket.view.loader/1
@@ -229,5 +231,15 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
                                                                               socket ->
       authenticate_and_authorize!(socket, session, params)
     end)
+  end
+
+  defp extract_resource_module(events, action, default) do
+    action = Atom.to_string(action)
+
+    events
+    |> Enum.find({nil, default}, fn {event, _resource_module} ->
+      event == action
+    end)
+    |> then(fn {_, resource_module} -> resource_module end)
   end
 end
