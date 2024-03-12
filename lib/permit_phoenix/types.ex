@@ -37,7 +37,7 @@ defmodule Permit.Phoenix.Types do
   """
   @type handle_unauthorized :: (Types.action_group(), conn() -> conn())
 
-  if {:module, Permit.Ecto.Types} == Code.ensure_compiled(EctoTypes) do
+  if :ok == Application.ensure_loaded(:permit_ecto) do
     @typedoc """
     - `:authorization_module` -- (Required) The app's authorization module that uses `use Permit`.
     - `preload_actions` -- (Optional) The list of actions that resources will be preloaded and authorized in, in addition to :show, :delete, :edit and :update.

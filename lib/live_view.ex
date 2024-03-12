@@ -44,7 +44,7 @@ defmodule Permit.Phoenix.LiveView do
   import Phoenix.LiveView
 
   @callback resource_module() :: module()
-  with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+  if :ok == Application.ensure_loaded(:permit_ecto) do
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
   end
@@ -62,10 +62,10 @@ defmodule Permit.Phoenix.LiveView do
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
 
   @optional_callbacks [
-                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+                        if(:ok == Application.ensure_loaded(:permit_ecto),
                           do: {:base_query, 1}
                         ),
-                        if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+                        if(:ok == Application.ensure_loaded(:permit_ecto),
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
@@ -83,7 +83,7 @@ defmodule Permit.Phoenix.LiveView do
     quote generated: true do
       import unquote(__MODULE__)
 
-      with {:module, Permit.Ecto} <- Code.ensure_compiled(Permit.Ecto) do
+      if :ok == Application.ensure_loaded(:permit_ecto) do
         require Ecto.Query
       end
 
@@ -118,7 +118,7 @@ defmodule Permit.Phoenix.LiveView do
       @impl true
       def except, do: unquote(opts[:except]) || []
 
-      if {:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto) do
+      if :ok == Application.ensure_loaded(:permit_ecto) do
         @impl true
         def base_query(%{
               action: action,
@@ -156,10 +156,10 @@ defmodule Permit.Phoenix.LiveView do
 
       defoverridable(
         [
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+          if(:ok == Application.ensure_loaded(:permit_ecto),
             do: {:base_query, 1}
           ),
-          if({:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto),
+          if(:ok == Application.ensure_loaded(:permit_ecto),
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
@@ -252,7 +252,7 @@ defmodule Permit.Phoenix.LiveView do
     end
   end
 
-  if {:module, Permit.Ecto} == Code.ensure_compiled(Permit.Ecto) do
+  if :ok == Application.ensure_loaded(:permit_ecto) do
     @doc false
     def base_query(
           %{
