@@ -84,7 +84,12 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   alias Permit.Phoenix.Types, as: PhoenixTypes
 
-  @action_mapping %{"delete" => :delete}
+  @action_mapping %{
+    "create" => :create,
+    "read" => :read,
+    "update" => :update,
+    "delete" => :delete
+  }
 
   # These two modules will be checked for the existence of the assign/3 function.
   # If neither exists (no LiveView dependency in a project), no failure happens.
@@ -150,7 +155,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
           PhoenixTypes.live_authorization_result()
   defp just_authorize(socket, action) do
     authorization_module = socket.view.authorization_module()
-    resource_module = socket.view.resource_module()
+    events = socket.view.get_events()
+    resource_module = extract_resource_module(events, action, socket.view.resource_module())
     resolver_module = authorization_module.resolver_module()
     subject = socket.assigns.current_user
 
@@ -172,7 +178,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     authorization_module = socket.view.authorization_module()
     actions_module = authorization_module.actions_module()
     resolver_module = authorization_module.resolver_module()
-    resource_module = socket.view.resource_module()
+    events = socket.view.get_events()
+    resource_module = extract_resource_module(events, action, socket.view.resource_module())
 
     base_query = &socket.view.base_query/1
     loader = &socket.view.loader/1
@@ -242,5 +249,15 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         {:cont, socket}
       end
     end)
+  end
+
+  defp extract_resource_module(events, action, default) do
+    action = Atom.to_string(action)
+
+    events
+    |> Enum.find({nil, default}, fn {event, _resource_module} ->
+      event == action
+    end)
+    |> then(fn {_, resource_module} -> resource_module end)
   end
 end
