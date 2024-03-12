@@ -9,8 +9,7 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepoWithLoader do
     resource_module: Item,
     preload_actions: [:show],
     except: [:action_without_authorizing],
-    fallback_path: "/?foo",
-    use_loader?: true
+    fallback_path: "/?foo"
 
   @item1 %Item{id: 1, owner_id: 1, permission_level: 1}
   @item2 %Item{id: 2, owner_id: 2, permission_level: 2, thread_name: "dmt"}
