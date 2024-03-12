@@ -40,6 +40,12 @@ defmodule Permit.EctoFakeApp.Permissions do
     |> all(User)
   end
 
+  def can(%{role: :moderator, level: 3} = _role) do
+    permit()
+    |> read(Item)
+    |> delete(User)
+  end
+
   def can(%{role: :thread_moderator, thread_name: thread} = _role) do
     permit()
     |> all(Item, permission_level: {:<=, 3}, thread_name: {:ilike, thread})

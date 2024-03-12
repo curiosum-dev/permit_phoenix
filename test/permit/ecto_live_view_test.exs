@@ -141,6 +141,30 @@ defmodule Permit.EctoLiveViewTest do
     end
   end
 
+  describe "moderator_3" do
+    setup [:moderator_3_role, :init_session]
+
+    test "should allow to delete the user", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/items")
+
+      lv |> element("#delete") |> render_click()
+
+      assigns = get_assigns(lv)
+
+      assert :unauthorized not in Map.keys(assigns)
+    end
+
+    test "should not allow to update the user", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/items")
+
+      lv |> element("#update") |> render_click()
+
+      assigns = get_assigns(lv)
+
+      assert :unauthorized in Map.keys(assigns)
+    end
+  end
+
   describe "function_owner" do
     setup [:function_owner_role, :init_session]
 
@@ -484,6 +508,10 @@ defmodule Permit.EctoLiveViewTest do
     {:ok, Map.put(context, :roles, [:owner])}
   end
 
+  def user_role(context) do
+    {:ok, Map.put(context, :roles, [:user])}
+  end
+
   def function_owner_role(context) do
     {:ok, Map.put(context, :roles, [:function_owner])}
   end
@@ -498,6 +526,10 @@ defmodule Permit.EctoLiveViewTest do
 
   def moderator_2_role(context) do
     {:ok, Map.put(context, :roles, [%{role: :moderator, level: 2}])}
+  end
+
+  def moderator_3_role(context) do
+    {:ok, Map.put(context, :roles, [%{role: :moderator, level: 3}])}
   end
 
   def dmt_thread_moderator_role(context) do
