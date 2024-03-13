@@ -8,6 +8,8 @@ defmodule Permit.EctoLiveViewTest do
   alias Permit.EctoLiveViewTest.{Endpoint, HooksLive}
   alias Permit.EctoFakeApp.{Item, Repo, User}
 
+  @not_found_message ~r/Expected at least one result but got none/
+
   @endpoint Endpoint
 
   setup do
@@ -71,6 +73,12 @@ defmodule Permit.EctoLiveViewTest do
       assert :mounted in Map.keys(assigns)
       assert :unauthorized not in Map.keys(assigns)
       assert :loaded_resources not in Map.keys(assigns)
+    end
+
+    test "raises when record does not exist", %{conn: conn} do
+      assert_raise Plug.Conn.WrapperError, @not_found_message, fn ->
+        live(conn, "/items/0")
+      end
     end
   end
 

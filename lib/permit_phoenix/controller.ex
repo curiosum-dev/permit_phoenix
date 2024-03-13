@@ -29,6 +29,7 @@ defmodule Permit.Phoenix.Controller do
   """
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.Types
+  alias PermitPhoenix.RecordNotFoundError
 
   import Plug.Conn
   import Phoenix.Controller
@@ -208,6 +209,8 @@ defmodule Permit.Phoenix.Controller do
   """
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.conn()) :: atom()
 
+  @callback handle_not_found(PhoenixTypes.conn()) :: PhoenixTypes.conn()
+
   @optional_callbacks [
                         if(:ok == Application.ensure_loaded(:permit_ecto),
                           do: {:base_query, 1}
@@ -221,7 +224,8 @@ defmodule Permit.Phoenix.Controller do
                         resource_module: 0,
                         except: 0,
                         fetch_subject: 1,
-                        loader: 1
+                        loader: 1,
+                        handle_not_found: 1
                       ]
                       |> Enum.filter(& &1)
 
@@ -238,6 +242,11 @@ defmodule Permit.Phoenix.Controller do
       @impl true
       def handle_unauthorized(action, conn) do
         unquote(__MODULE__).handle_unauthorized(action, conn, unquote(opts))
+      end
+
+      @impl true
+      def handle_not_found(conn) do
+        unquote(__MODULE__).handle_not_found(conn, unquote(opts))
       end
 
       @impl true
@@ -320,7 +329,8 @@ defmodule Permit.Phoenix.Controller do
           except: 0,
           fetch_subject: 1,
           id_param_name: 2,
-          id_struct_field_name: 2
+          id_struct_field_name: 2,
+          handle_not_found: 1
         ]
         |> Enum.filter(& &1)
       )
@@ -376,7 +386,8 @@ defmodule Permit.Phoenix.Controller do
             id_param_name: &__MODULE__.id_param_name/2,
             id_struct_field_name: &__MODULE__.id_struct_field_name/2,
             controller_actions: @controller_actions,
-            id_struct_field_name: &__MODULE__.id_struct_field_name/2
+            id_struct_field_name: &__MODULE__.id_struct_field_name/2,
+            handle_not_found: &__MODULE__.handle_not_found/1
           ]
           |> Enum.filter(& &1)
         )
@@ -393,6 +404,10 @@ defmodule Permit.Phoenix.Controller do
     )
     |> redirect(to: __MODULE__.fallback_path(action, conn, opts))
     |> halt()
+  end
+
+  def handle_not_found(_conn, _opts) do
+    raise RecordNotFoundError, "Expected at least one result but got none"
   end
 
   @doc false

@@ -9,6 +9,8 @@ defmodule Permit.EctoPlugTest do
     Router
   }
 
+  @not_found_message ~r/Expected at least one result but got none/
+
   setup do
     %{users: users, items: items} = Repo.seed_data!()
 
@@ -44,7 +46,7 @@ defmodule Permit.EctoPlugTest do
     end
 
     test "raises when record does not exist", %{conn: conn} do
-      assert_raise Plug.Conn.WrapperError, ~r/Ecto\.NoResultsError/, fn ->
+      assert_raise Plug.Conn.WrapperError, @not_found_message, fn ->
         call(conn, :get, "/items/0")
       end
     end
