@@ -251,13 +251,13 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     end)
   end
 
-  defp extract_resource_module(events, action, default) do
+  defp extract_resource_module(events, action, default_resource_module) do
     action = Atom.to_string(action)
 
     events
-    |> Enum.find({nil, default}, fn {event, _resource_module} ->
+    |> Enum.find({nil, nil}, fn {event, _resource_module} ->
       event == action
     end)
-    |> then(fn {_, resource_module} -> resource_module end)
+    |> then(fn {_, resource_module} -> resource_module || default_resource_module end)
   end
 end
