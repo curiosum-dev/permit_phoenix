@@ -40,6 +40,7 @@ defmodule Permit.Phoenix.LiveView do
   """
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.Types
+  alias PermitPhoenix.RecordNotFoundError
 
   import Phoenix.LiveView
 
@@ -233,7 +234,7 @@ defmodule Permit.Phoenix.LiveView do
   end
 
   def handle_not_found(_socket, _opts) do
-    raise "Expected at least one result but got none"
+    raise RecordNotFoundError, "Expected at least one result but got none"
   end
 
   @doc false

@@ -29,6 +29,7 @@ defmodule Permit.Phoenix.Controller do
   """
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.Types
+  alias PermitPhoenix.RecordNotFoundError
 
   import Plug.Conn
   import Phoenix.Controller
@@ -391,7 +392,7 @@ defmodule Permit.Phoenix.Controller do
   end
 
   def handle_not_found(_conn, _opts) do
-    raise "Expected at least one result but got none"
+    raise RecordNotFoundError, "Expected at least one result but got none"
   end
 
   @doc false
