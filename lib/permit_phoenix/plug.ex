@@ -174,7 +174,8 @@ defmodule Permit.Phoenix.Plug do
         base_query: opts[:base_query],
         finalize_query: opts[:finalize_query],
         params: conn.params,
-        conn: conn
+        conn: conn,
+        use_loader?: opts[:use_loader?]
       }
       |> Map.filter(fn {_, val} -> !!val end)
 
