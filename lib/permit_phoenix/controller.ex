@@ -230,6 +230,10 @@ defmodule Permit.Phoenix.Controller do
       require Logger
 
       @behaviour unquote(__MODULE__)
+      @before_compile unquote(__MODULE__)
+      @on_definition {unquote(__MODULE__), :__on_definition__}
+      @controller_actions []
+      @opts unquote(opts)
 
       @impl true
       def handle_unauthorized(action, conn) do
@@ -287,11 +291,6 @@ defmodule Permit.Phoenix.Controller do
       end
 
       @impl true
-      def loader(resolution_context) do
-        unquote(__MODULE__).loader(resolution_context, unquote(opts))
-      end
-
-      @impl true
       def id_param_name(action, conn) do
         unquote(__MODULE__).id_param_name(action, conn, unquote(opts))
       end
@@ -320,35 +319,68 @@ defmodule Permit.Phoenix.Controller do
           resource_module: 0,
           except: 0,
           fetch_subject: 1,
-          loader: 1,
           id_param_name: 2,
           id_struct_field_name: 2
         ]
         |> Enum.filter(& &1)
       )
 
-      plug(
-        Permit.Phoenix.Plug,
-        [
-          if(:ok == Application.ensure_loaded(:permit_ecto),
-            do: {:base_query, &__MODULE__.base_query/1}
-          ),
-          if(:ok == Application.ensure_loaded(:permit_ecto),
-            do: {:finalize_query, &__MODULE__.finalize_query/2}
-          ),
-          authorization_module: &__MODULE__.authorization_module/0,
-          resource_module: &__MODULE__.resource_module/0,
-          preload_actions: &__MODULE__.preload_actions/0,
-          fallback_path: &__MODULE__.fallback_path/2,
-          except: &__MODULE__.except/0,
-          fetch_subject: &__MODULE__.fetch_subject/1,
-          handle_unauthorized: &__MODULE__.handle_unauthorized/2,
-          loader: &__MODULE__.loader/1,
-          id_param_name: &__MODULE__.id_param_name/2,
-          id_struct_field_name: &__MODULE__.id_struct_field_name/2
-        ]
-        |> Enum.filter(& &1)
-      )
+      plug(:permit_phoenix_plug)
+    end
+  end
+
+  def __on_definition__(env, _kind, name, _args, _guards, _body) do
+    resource_module = Module.get_attribute(env.module, :resource_module)
+    controller_actions = Module.get_attribute(env.module, :controller_actions)
+
+    Module.put_attribute(env.module, :controller_actions, [
+      {name, resource_module} | controller_actions
+    ])
+
+    Module.delete_attribute(env.module, :resource_module)
+  end
+
+  defmacro __before_compile__(_env) do
+    quote do
+      if Module.defines?(__MODULE__, {:loader, 1}) do
+        @loader_defined? true
+      else
+        @loader_defined? false
+        @impl true
+        def loader(resolution_context) do
+          unquote(__MODULE__).loader(resolution_context, @opts)
+        end
+      end
+
+      def permit_phoenix_plug(conn, _opts) do
+        Permit.Phoenix.Plug.call(
+          conn,
+          [
+            if(:ok == Application.ensure_loaded(:permit_ecto),
+              do: {:base_query, &__MODULE__.base_query/1}
+            ),
+            if(:ok == Application.ensure_loaded(:permit_ecto),
+              do: {:finalize_query, &__MODULE__.finalize_query/2}
+            ),
+            if(:ok == Application.ensure_loaded(:permit_ecto),
+              do: {:use_loader?, @loader_defined?}
+            ),
+            authorization_module: &__MODULE__.authorization_module/0,
+            resource_module: &__MODULE__.resource_module/0,
+            preload_actions: &__MODULE__.preload_actions/0,
+            fallback_path: &__MODULE__.fallback_path/2,
+            except: &__MODULE__.except/0,
+            fetch_subject: &__MODULE__.fetch_subject/1,
+            handle_unauthorized: &__MODULE__.handle_unauthorized/2,
+            loader: &__MODULE__.loader/1,
+            id_param_name: &__MODULE__.id_param_name/2,
+            id_struct_field_name: &__MODULE__.id_struct_field_name/2,
+            controller_actions: @controller_actions,
+            id_struct_field_name: &__MODULE__.id_struct_field_name/2
+          ]
+          |> Enum.filter(& &1)
+        )
+      end
     end
   end
 

@@ -88,6 +88,10 @@ defmodule Permit.Phoenix.LiveView do
       end
 
       @behaviour unquote(__MODULE__)
+      @on_definition {unquote(__MODULE__), :__on_definition__}
+      @before_compile unquote(__MODULE__)
+      @opts unquote(opts)
+      @events []
 
       @impl true
       def handle_unauthorized(action, socket) do
@@ -141,11 +145,6 @@ defmodule Permit.Phoenix.LiveView do
       end
 
       @impl true
-      def loader(resolution_context) do
-        unquote(__MODULE__).loader(resolution_context, unquote(opts))
-      end
-
-      @impl true
       def id_param_name(action, socket) do
         unquote(__MODULE__).id_param_name(action, socket, unquote(opts))
       end
@@ -168,7 +167,6 @@ defmodule Permit.Phoenix.LiveView do
           fallback_path: 2,
           resource_module: 0,
           except: 0,
-          loader: 1,
           id_param_name: 2,
           id_struct_field_name: 2
         ]
@@ -176,6 +174,37 @@ defmodule Permit.Phoenix.LiveView do
       )
     end
   end
+
+  def __on_definition__(env, _kind, :handle_event, args, _guards, _body) do
+    resource_module = Module.get_attribute(env.module, :resource_module)
+    events = Module.get_attribute(env.module, :events)
+    action = extract_action(args)
+
+    Module.put_attribute(env.module, :events, [{action, resource_module} | events])
+
+    Module.delete_attribute(env.module, :resource_module)
+  end
+
+  def __on_definition__(_env, _kind, _name, _args, _guards, _body), do: nil
+
+  defmacro __before_compile__(_env) do
+    quote do
+      def get_events, do: @events
+
+      if Module.defines?(__MODULE__, {:loader, 1}) do
+        def use_loader?, do: true
+      else
+        def use_loader?, do: false
+        @impl true
+        def loader(resolution_context) do
+          unquote(__MODULE__).loader(resolution_context, @opts)
+        end
+      end
+    end
+  end
+
+  defp extract_action([action, _, _]), do: action
+  defp extract_action(_), do: nil
 
   @doc """
   Returns true if inside mount/1, false otherwise. Useful for distinguishing between

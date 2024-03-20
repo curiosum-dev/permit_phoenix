@@ -8,6 +8,7 @@ defmodule Permit.NonEctoFakeApp.Permissions do
   def can(:admin = _role) do
     permit()
     |> all(Item)
+    |> all(User)
   end
 
   def can(:owner = _role) do

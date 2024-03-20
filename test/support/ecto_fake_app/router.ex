@@ -18,8 +18,10 @@ defmodule Permit.EctoFakeApp.Router do
 
     post("/sign_in", Permit.EctoFakeApp.SessionController, :create)
     resources("/items", Permit.EctoFakeApp.ItemControllerUsingRepo)
+    resources("/blogs", Permit.EctoFakeApp.ItemControllerUsingRepoWithLoader)
 
     get("/details/:id", Permit.EctoFakeApp.ItemControllerUsingRepo, :show)
+    get("/account/:id", Permit.EctoFakeApp.ItemControllerUsingRepoWithLoader, :show)
 
     get(
       "/action_without_authorizing",

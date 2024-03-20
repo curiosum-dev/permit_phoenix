@@ -104,7 +104,8 @@ defmodule Permit.Phoenix.Plug do
     if action_group in opts[:except] do
       conn
     else
-      resource_module = opts[:resource_module]
+      resource_module =
+        Keyword.get(opts[:controller_actions], action_group) || opts[:resource_module]
 
       subject = opts[:fetch_subject].(conn)
       authorize(conn, opts, action_group, subject, resource_module)
@@ -174,7 +175,8 @@ defmodule Permit.Phoenix.Plug do
         base_query: opts[:base_query],
         finalize_query: opts[:finalize_query],
         params: conn.params,
-        conn: conn
+        conn: conn,
+        use_loader?: opts[:use_loader?]
       }
       |> Map.filter(fn {_, val} -> !!val end)
 
