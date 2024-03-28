@@ -43,6 +43,7 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
     ~H"""
     <button id="navigate_show" phx-click="navigate" phx-value-url="/items/1">show</button>
     <button id="navigate_edit" phx-click="navigate" phx-value-url="/items/1/edit">edit</button>
+    <button id="delete" phx-click="delete" phx-value-id="2">delete</button>
     """
   end
 
@@ -54,6 +55,10 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   @impl true
   def handle_event("navigate", %{"url" => url}, socket) do
     {:noreply, push_patch(socket, to: url)}
+  end
+
+  def handle_event("delete", %{"id" => _id}, socket) do
+    {:noreply, socket}
   end
 
   @impl true

@@ -14,6 +14,7 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepo do
   def index(conn, _params), do: text(conn, "listing all items")
   def show(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))
   def edit(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))
+  def delete(conn, params), do: text(conn, "deleting item #{params["id"]}")
   def details(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))
   def action_without_authorizing(conn, _params), do: text(conn, "okay")
 end
