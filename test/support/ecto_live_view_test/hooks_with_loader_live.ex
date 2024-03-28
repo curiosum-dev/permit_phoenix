@@ -16,7 +16,11 @@ defmodule Permit.EctoLiveViewTest.HooksWithLoaderLive do
   def loader(%{params: %{"id" => "1"}}), do: @item1
   def loader(%{params: %{"id" => "2"}}), do: @item2
   def loader(%{params: %{"id" => "3"}}), do: @item3
-  def loader(_), do: []
+  def loader(_), do: nil
+
+  def handle_not_found(socket) do
+    {:cont, put_flash(socket, :error, "Record not found")}
+  end
 
   @impl Permit.Phoenix.LiveView
   def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}

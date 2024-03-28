@@ -210,6 +210,12 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
          socket
          |> live_view_assign(load_key, nil)
          |> live_view_assign(other_key, nil)}
+
+      nil ->
+        {nil,
+         socket
+         |> live_view_assign(load_key, nil)
+         |> live_view_assign(other_key, nil)}
     end
   end
 
@@ -218,6 +224,10 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   defp respond({:unauthorized, socket}) do
     socket.view.handle_unauthorized(socket.assigns[:live_action], socket)
+  end
+
+  defp respond({nil, socket}) do
+    socket.view.handle_not_found(socket)
   end
 
   defp respond({:authorized, socket}) do
