@@ -2,13 +2,14 @@ defmodule Permit.NonEctoFakeApp.ItemControllerUsingLoader do
   @moduledoc false
   use Phoenix.Controller
 
-  alias Permit.NonEctoFakeApp.{Authorization, Item, NoResultsError}
+  alias Permit.NonEctoFakeApp.{Authorization, Item, NoResultsError, User}
 
   use Permit.Phoenix.Controller,
     authorization_module: Authorization,
     resource_module: Item
 
-  def index(conn, _params), do: text(conn, "listing all items")
+  @resource_module User
+  def index(conn, _params), do: text(conn, "listing all users")
   def show(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))
 
   @item1 %Item{id: 1, owner_id: 1, permission_level: 1}

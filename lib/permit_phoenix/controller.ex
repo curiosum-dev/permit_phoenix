@@ -231,6 +231,8 @@ defmodule Permit.Phoenix.Controller do
 
       @behaviour unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+      @on_definition {unquote(__MODULE__), :__on_definition__}
+      @controller_actions []
       @opts unquote(opts)
 
       @impl true
@@ -327,6 +329,17 @@ defmodule Permit.Phoenix.Controller do
     end
   end
 
+  def __on_definition__(env, _kind, name, _args, _guards, _body) do
+    resource_module = Module.get_attribute(env.module, :resource_module)
+    controller_actions = Module.get_attribute(env.module, :controller_actions)
+
+    Module.put_attribute(env.module, :controller_actions, [
+      {name, resource_module} | controller_actions
+    ])
+
+    Module.delete_attribute(env.module, :resource_module)
+  end
+
   defmacro __before_compile__(_env) do
     quote do
       if Module.defines?(__MODULE__, {:loader, 1}) do
@@ -361,6 +374,8 @@ defmodule Permit.Phoenix.Controller do
             handle_unauthorized: &__MODULE__.handle_unauthorized/2,
             loader: &__MODULE__.loader/1,
             id_param_name: &__MODULE__.id_param_name/2,
+            id_struct_field_name: &__MODULE__.id_struct_field_name/2,
+            controller_actions: @controller_actions,
             id_struct_field_name: &__MODULE__.id_struct_field_name/2
           ]
           |> Enum.filter(& &1)

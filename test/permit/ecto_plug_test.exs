@@ -22,11 +22,23 @@ defmodule Permit.EctoPlugTest do
 
     test "authorizes :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
-      assert conn.resp_body == "listing all items"
+      assert conn.resp_body == "listing all users"
+    end
+
+    test "authorizes :delete action", %{conn: conn} do
+      conn = call(conn, :delete, "/items/1")
+      assert conn.resp_body == "deleting item 1"
     end
 
     test "authorizes :show action", %{conn: conn} do
       conn = call(conn, :get, "/items/1")
+      assert conn.resp_body =~ ~r[Item]
+      assert %Item{id: 1} = conn.assigns[:loaded_resource]
+    end
+
+    test "authorizes :details action and preloads resource via :action_crud_mapping and :preload_actions options",
+         %{conn: conn} do
+      conn = call(conn, :get, "/details/1")
       assert conn.resp_body =~ ~r[Item]
       assert %Item{id: 1} = conn.assigns[:loaded_resource]
     end
@@ -45,6 +57,11 @@ defmodule Permit.EctoPlugTest do
 
     test "does not authorize :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
+      assert_unauthorized(conn, "/?foo")
+    end
+
+    test "does not authorizes :delete action", %{conn: conn} do
+      conn = call(conn, :delete, "/items/1")
       assert_unauthorized(conn, "/?foo")
     end
 
@@ -71,7 +88,7 @@ defmodule Permit.EctoPlugTest do
 
     test "authorizes :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
-      assert conn.resp_body == "listing all items"
+      assert conn.resp_body == "listing all users"
     end
 
     test "authorizes :show action for object with matching :owner_id", %{conn: conn} do
@@ -105,7 +122,7 @@ defmodule Permit.EctoPlugTest do
 
     test "authorizes :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
-      assert conn.resp_body == "listing all items"
+      assert conn.resp_body == "listing all users"
     end
 
     test "authorizes :show action", %{conn: conn} do
@@ -137,7 +154,7 @@ defmodule Permit.EctoPlugTest do
 
     test "authorizes :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
-      assert conn.resp_body == "listing all items"
+      assert conn.resp_body == "listing all users"
     end
 
     test "authorizes :show action on item 1", %{conn: conn} do
@@ -188,7 +205,7 @@ defmodule Permit.EctoPlugTest do
 
     test "authorizes :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
-      assert conn.resp_body == "listing all items"
+      assert conn.resp_body == "listing all users"
     end
 
     test "authorizes :show action on item 2", %{conn: conn} do
