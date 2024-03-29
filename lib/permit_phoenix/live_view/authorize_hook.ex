@@ -147,7 +147,12 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   defp just_authorize(socket) do
     authorization_module = socket.view.authorization_module()
     events = socket.view.get_events()
-    resource_module = extract_resource_module(events, action, socket.view.resource_module())
+
+    # TODO: change socket.assigns.live_action to action from function params
+    # when event authorization is merged in
+    resource_module =
+      extract_resource_module(events, socket.assigns.live_action, socket.view.resource_module())
+
     resolver_module = authorization_module.resolver_module()
     subject = socket.assigns.current_user
     action = socket.assigns.live_action
@@ -170,7 +175,12 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     actions_module = authorization_module.actions_module()
     resolver_module = authorization_module.resolver_module()
     events = socket.view.get_events()
-    resource_module = extract_resource_module(events, action, socket.view.resource_module())
+
+    # TODO: change socket.assigns.live_action to action from function params
+    # when event authorization is merged in
+
+    resource_module =
+      extract_resource_module(events, socket.assigns.live_action, socket.view.resource_module())
 
     base_query = &socket.view.base_query/1
     loader = &socket.view.loader/1
