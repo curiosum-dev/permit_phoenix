@@ -119,7 +119,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     action = socket.assigns.live_action
 
     socket
-    |> attach_params_hook(params, session)
+    |> attach_hooks(params, session)
     |> authenticate_and_authorize!(action, session, params)
   end
 
@@ -237,7 +237,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     {:cont, socket}
   end
 
-  defp attach_params_hook(socket, _mount_params, session) do
+  defp attach_hooks(socket, _mount_params, session) do
     socket
     |> Phoenix.LiveView.attach_hook(:params_authorization, :handle_params, fn params,
                                                                               _uri,
