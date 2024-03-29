@@ -84,8 +84,6 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   alias Permit.Phoenix.Types, as: PhoenixTypes
 
-  @action_mapping %{"delete" => :delete}
-
   # These two modules will be checked for the existence of the assign/3 function.
   # If neither exists (no LiveView dependency in a project), no failure happens.
   Code.ensure_loaded(Phoenix.LiveView)
@@ -247,7 +245,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
                                                                             params,
                                                                             socket ->
-      if action = @action_mapping[event] do
+      if action = socket.view.event_mapping[event] do
         authenticate_and_authorize!(socket, action, session, params)
       else
         {:cont, socket}
