@@ -12,7 +12,7 @@ defmodule Permit.Phoenix.Types do
   # Phoenix LiveView-specific types
   @type socket :: Phoenix.LiveView.Socket.t()
   @type hook_outcome :: {:halt, socket()} | {:cont, socket()} | no_return()
-  @type live_authorization_result :: {:authorized | :unauthorized | nil, socket()}
+  @type live_authorization_result :: {:authorized | :unauthorized | :not_found, socket()}
 
   # Opts types
   @type action_list :: list(Types.action_group())
