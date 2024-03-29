@@ -25,6 +25,11 @@ defmodule Permit.EctoPlugTest do
       assert conn.resp_body == "listing all items"
     end
 
+    test "authorizes :delete action", %{conn: conn} do
+      conn = call(conn, :delete, "/items/1")
+      assert conn.resp_body == "deleting item 1"
+    end
+
     test "authorizes :show action", %{conn: conn} do
       conn = call(conn, :get, "/items/1")
       assert conn.resp_body =~ ~r[Item]
@@ -45,6 +50,11 @@ defmodule Permit.EctoPlugTest do
 
     test "does not authorize :index action", %{conn: conn} do
       conn = call(conn, :get, "/items")
+      assert_unauthorized(conn, "/?foo")
+    end
+
+    test "does not authorizes :delete action", %{conn: conn} do
+      conn = call(conn, :delete, "/items/1")
       assert_unauthorized(conn, "/?foo")
     end
 

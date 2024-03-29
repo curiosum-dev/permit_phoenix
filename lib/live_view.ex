@@ -60,6 +60,7 @@ defmodule Permit.Phoenix.LiveView do
 
   @callback id_param_name(Types.action_group(), PhoenixTypes.socket()) :: binary()
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
+  @callback event_mapping() :: map()
 
   @optional_callbacks [
                         if(:ok == Application.ensure_loaded(:permit_ecto),
@@ -88,6 +89,9 @@ defmodule Permit.Phoenix.LiveView do
       end
 
       @behaviour unquote(__MODULE__)
+
+      @impl true
+      def event_mapping, do: unquote(__MODULE__).event_mapping()
 
       @impl true
       def handle_unauthorized(action, socket) do
@@ -203,6 +207,19 @@ defmodule Permit.Phoenix.LiveView do
     # Raises RuntimeError if outside mount/1 because socket_info only exists while mounting.
     # This allows us to distinguish between accessing directly from router or via e.g. handle_params.
     RuntimeError -> false
+  end
+
+  @doc false
+  def event_mapping do
+    %{
+      "create" => :create,
+      "delete" => :delete,
+      "edit" => :edit,
+      "index" => :index,
+      "new" => :new,
+      "show" => :show,
+      "update" => :update
+    }
   end
 
   @doc false
