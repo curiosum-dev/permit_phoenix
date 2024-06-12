@@ -63,6 +63,13 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
       assert :unauthorized not in Map.keys(assigns)
       assert :loaded_resources not in Map.keys(assigns)
     end
+
+    test "should assign flash error", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/books/100")
+
+      assigns = get_assigns(lv)
+      assert assigns.flash["error"] == "Record not found"
+    end
   end
 
   describe "owner" do

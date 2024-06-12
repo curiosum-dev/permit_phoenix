@@ -190,6 +190,7 @@ defmodule Permit.Phoenix.Plug do
          ) do
       {:authorized, record_or_records} -> Plug.Conn.assign(conn, load_key, record_or_records)
       :unauthorized -> opts[:handle_unauthorized].(action, conn)
+      :not_found -> opts[:handle_not_found].(conn)
     end
   end
 
