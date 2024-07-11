@@ -245,7 +245,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
                                                                             params,
                                                                             socket ->
-      if action = socket.view.event_mapping[event] do
+      if action = socket.view.event_mapping()[event] do
         authenticate_and_authorize!(socket, action, session, params)
       else
         {:cont, socket}
