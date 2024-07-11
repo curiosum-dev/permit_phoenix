@@ -28,5 +28,5 @@ defmodule Permit.Phoenix.Actions do
   end
 
   def singular_actions,
-    do: [:show, :edit, :new]
+    do: [:show, :edit, :new, :delete, :update]
 end

@@ -104,7 +104,8 @@ defmodule Permit.Phoenix.LiveView do
       def resource_module, do: unquote(opts[:resource_module])
 
       @impl true
-      def preload_actions, do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index]
+      def preload_actions,
+        do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index, :delete]
 
       @impl true
       def fallback_path(action, socket) do
