@@ -88,6 +88,8 @@ defmodule Permit.Phoenix.LiveView do
       end
 
       @behaviour unquote(__MODULE__)
+      @before_compile unquote(__MODULE__)
+      @opts unquote(opts)
 
       @impl true
       def handle_unauthorized(action, socket) do
@@ -142,11 +144,6 @@ defmodule Permit.Phoenix.LiveView do
       end
 
       @impl true
-      def loader(resolution_context) do
-        unquote(__MODULE__).loader(resolution_context, unquote(opts))
-      end
-
-      @impl true
       def id_param_name(action, socket) do
         unquote(__MODULE__).id_param_name(action, socket, unquote(opts))
       end
@@ -169,12 +166,25 @@ defmodule Permit.Phoenix.LiveView do
           fallback_path: 2,
           resource_module: 0,
           except: 0,
-          loader: 1,
           id_param_name: 2,
           id_struct_field_name: 2
         ]
         |> Enum.filter(& &1)
       )
+    end
+  end
+
+  defmacro __before_compile__(_env) do
+    quote do
+      if Module.defines?(__MODULE__, {:loader, 1}) do
+        def use_loader?, do: true
+      else
+        def use_loader?, do: false
+        @impl true
+        def loader(resolution_context) do
+          unquote(__MODULE__).loader(resolution_context, @opts)
+        end
+      end
     end
   end
 
