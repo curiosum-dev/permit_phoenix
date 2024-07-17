@@ -107,6 +107,7 @@ defmodule Permit.Phoenix.Plug do
       resource_module = opts[:resource_module]
 
       subject = opts[:fetch_subject].(conn)
+
       authorize(conn, opts, action_group, subject, resource_module)
     end
   end

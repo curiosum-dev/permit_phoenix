@@ -61,6 +61,7 @@ defmodule Permit.Phoenix.LiveView do
   @callback handle_not_found(PhoenixTypes.socket()) :: PhoenixTypes.hook_outcome()
   @callback id_param_name(Types.action_group(), PhoenixTypes.socket()) :: binary()
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
+  @callback unauthorized_message(PhoenixTypes.socket(), map()) :: binary()
   @callback event_mapping() :: map()
 
   @optional_callbacks [
@@ -78,7 +79,8 @@ defmodule Permit.Phoenix.LiveView do
                         loader: 1,
                         id_param_name: 2,
                         id_struct_field_name: 2,
-                        handle_not_found: 1
+                        handle_not_found: 1,
+                        unauthorized_message: 2
                       ]
                       |> Enum.filter(& &1)
 
@@ -100,6 +102,11 @@ defmodule Permit.Phoenix.LiveView do
       @impl true
       def handle_unauthorized(action, socket) do
         unquote(__MODULE__).handle_unauthorized(action, socket, unquote(opts))
+      end
+
+      @impl true
+      def unauthorized_message(action, socket) do
+        unquote(__MODULE__).unauthorized_message(action, socket, unquote(opts))
       end
 
       @impl true
@@ -244,9 +251,25 @@ defmodule Permit.Phoenix.LiveView do
   @doc false
   def handle_unauthorized(action, socket, opts) do
     case opts[:handle_unauthorized] do
-      nil -> {:halt, push_redirect(socket, to: fallback_path(action, socket, opts))}
+      nil ->
+        {:halt,
+         socket
+         |> put_flash(:error, socket.view.unauthorized_message(action, socket))
+         |> push_redirect(to: socket.view.fallback_path(action, socket))}
+
+      fun when is_function(fun) ->
+        fun.(action, socket)
+
+      handle_unauthorized ->
+        handle_unauthorized
+    end
+  end
+
+  def unauthorized_message(action, socket, opts) do
+    case opts[:unauthorized_message] do
+      nil -> "You do not have permission to perform this action."
       fun when is_function(fun) -> fun.(action, socket)
-      handle_unauthorized -> handle_unauthorized
+      msg -> msg
     end
   end
 
