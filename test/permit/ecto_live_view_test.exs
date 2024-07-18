@@ -138,6 +138,13 @@ defmodule Permit.EctoLiveViewTest do
       refute assigns[:loaded_resource]
     end
 
+    test "allows customizing fallback_path and unauthorized_message via functions", %{conn: conn} do
+      assert {:error, {:live_redirect, %{flash: %{"error" => "Lorem ipsum."}, to: "/?foo"}}} =
+               conn
+               |> fetch_flash()
+               |> live("/items_custom/2/edit")
+    end
+
     test "can do :new on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items/new")
 
@@ -521,8 +528,8 @@ defmodule Permit.EctoLiveViewTest do
        )}
   end
 
-  defp get_assigns(lv) do
-    HooksLive.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
+  defp get_assigns(lv, live_module \\ HooksLive) do
+    live_module.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
   end
 
   defp assert_raise_unconvertible_condition_error(conn, url) do

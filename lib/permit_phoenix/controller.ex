@@ -211,6 +211,8 @@ defmodule Permit.Phoenix.Controller do
 
   @callback handle_not_found(PhoenixTypes.conn()) :: PhoenixTypes.conn()
 
+  @callback unauthorized_message(Types.action_group(), PhoenixTypes.conn()) :: binary()
+
   @optional_callbacks [
                         if(:ok == Application.ensure_loaded(:permit_ecto),
                           do: {:base_query, 1}
@@ -225,7 +227,8 @@ defmodule Permit.Phoenix.Controller do
                         except: 0,
                         fetch_subject: 1,
                         loader: 1,
-                        handle_not_found: 1
+                        handle_not_found: 1,
+                        unauthorized_message: 2
                       ]
                       |> Enum.filter(& &1)
 
@@ -245,6 +248,11 @@ defmodule Permit.Phoenix.Controller do
       @impl true
       def handle_not_found(conn) do
         unquote(__MODULE__).handle_not_found(conn, unquote(opts))
+      end
+
+      @impl true
+      def unauthorized_message(action, conn) do
+        unquote(__MODULE__).unauthorized_message(action, conn, unquote(opts))
       end
 
       @impl true
@@ -328,7 +336,8 @@ defmodule Permit.Phoenix.Controller do
           fetch_subject: 1,
           id_param_name: 2,
           id_struct_field_name: 2,
-          handle_not_found: 1
+          handle_not_found: 1,
+          unauthorized_message: 2
         ]
         |> Enum.filter(& &1)
       )
@@ -372,7 +381,8 @@ defmodule Permit.Phoenix.Controller do
             loader: &__MODULE__.loader/1,
             id_param_name: &__MODULE__.id_param_name/2,
             id_struct_field_name: &__MODULE__.id_struct_field_name/2,
-            handle_not_found: &__MODULE__.handle_not_found/1
+            handle_not_found: &__MODULE__.handle_not_found/1,
+            unauthorized_message: &__MODULE__.unauthorized_message/2
           ]
           |> Enum.filter(& &1)
         )
@@ -381,13 +391,10 @@ defmodule Permit.Phoenix.Controller do
   end
 
   @doc false
-  def handle_unauthorized(action, conn, opts) do
+  def handle_unauthorized(action, conn, _opts) do
     conn
-    |> put_flash(
-      :error,
-      opts[:error_msg] || "You do not have permission to perform this action."
-    )
-    |> redirect(to: __MODULE__.fallback_path(action, conn, opts))
+    |> put_flash(:error, controller_module(conn).unauthorized_message(action, conn))
+    |> redirect(to: controller_module(conn).fallback_path(action, conn))
     |> halt()
   end
 
@@ -401,6 +408,14 @@ defmodule Permit.Phoenix.Controller do
       nil -> "/"
       fun when is_function(fun) -> fun.(action, conn)
       path -> path
+    end
+  end
+
+  def unauthorized_message(action, conn, opts) do
+    case opts[:unauthorized_message] do
+      nil -> "You do not have permission to perform this action."
+      fun when is_function(fun) -> fun.(action, conn)
+      msg -> msg
     end
   end
 

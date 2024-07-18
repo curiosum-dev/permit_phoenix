@@ -23,6 +23,8 @@ defmodule Permit.EctoFakeApp.Router do
     get("/details/:id", Permit.EctoFakeApp.ItemControllerUsingRepo, :show)
     get("/account/:id", Permit.EctoFakeApp.ItemControllerUsingRepoWithLoader, :show)
 
+    resources("/items_custom", Permit.EctoFakeApp.ItemControllerUsingRepoWithCustomOpts)
+
     get(
       "/action_without_authorizing",
       Permit.EctoFakeApp.ItemControllerUsingRepo,
