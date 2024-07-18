@@ -96,6 +96,11 @@ defmodule Permit.EctoPlugTest do
       conn = call(conn, :get, "/items/2")
       assert_unauthorized(conn, "/?foo")
     end
+
+    test "allows customizing fallback_path and unauthorized_message", %{conn: conn} do
+      conn = call(conn, :get, "/items_custom/2")
+      assert_unauthorized(conn, "/?foo", "Lorem ipsum.")
+    end
   end
 
   describe "function_owner" do
@@ -253,9 +258,16 @@ defmodule Permit.EctoPlugTest do
     end
   end
 
-  defp assert_unauthorized(conn, fallback_path) do
-    assert get_in(conn.private, [:phoenix_flash, "error"]) ||
-             get_in(conn.assigns, [:flash, "error"])
+  defp assert_unauthorized(
+         conn,
+         fallback_path,
+         expected_msg \\ "You do not have permission to perform this action."
+       ) do
+    actual_msg =
+      get_in(conn.private, [:phoenix_flash, "error"]) ||
+        get_in(conn.assigns, [:flash, "error"])
+
+    assert expected_msg == actual_msg
 
     assert Map.new(conn.resp_headers)["location"] == fallback_path
   end

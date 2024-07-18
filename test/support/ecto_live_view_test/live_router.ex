@@ -4,12 +4,16 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
   import Phoenix.LiveView.Router
   alias Permit.EctoLiveViewTest.HooksWithLoaderLive
   alias Permit.EctoLiveViewTest.HooksLive
+  alias Permit.EctoLiveViewTest.HooksWithCustomOptsLive
 
   live_session :authenticated, on_mount: Permit.Phoenix.LiveView.AuthorizeHook do
     live("/items", HooksLive, :index)
     live("/items/new", HooksLive, :new)
     live("/items/:id/edit", HooksLive, :edit)
     live("/items/:id", HooksLive, :show)
+
+    live("/items_custom/:id/edit", HooksWithCustomOptsLive, :edit)
+
     live("/books", HooksWithLoaderLive, :index)
     live("/books/new", HooksWithLoaderLive, :new)
     live("/books/:id/edit", HooksWithLoaderLive, :edit)

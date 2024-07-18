@@ -227,7 +227,8 @@ defmodule Permit.Phoenix.Controller do
                         except: 0,
                         fetch_subject: 1,
                         loader: 1,
-                        handle_not_found: 1
+                        handle_not_found: 1,
+                        unauthorized_message: 2
                       ]
                       |> Enum.filter(& &1)
 
@@ -335,7 +336,8 @@ defmodule Permit.Phoenix.Controller do
           fetch_subject: 1,
           id_param_name: 2,
           id_struct_field_name: 2,
-          handle_not_found: 1
+          handle_not_found: 1,
+          unauthorized_message: 2
         ]
         |> Enum.filter(& &1)
       )

@@ -186,7 +186,8 @@ defmodule Permit.Phoenix.LiveView do
           except: 0,
           id_param_name: 2,
           id_struct_field_name: 2,
-          handle_not_found: 1
+          handle_not_found: 1,
+          unauthorized_message: 2
         ]
         |> Enum.filter(& &1)
       )
