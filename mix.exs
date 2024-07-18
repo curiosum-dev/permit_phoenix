@@ -2,7 +2,7 @@ defmodule Permit.Phoenix.MixProject do
   @moduledoc false
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @source_url "https://github.com/curiosum-dev/permit_phoenix"
 
   def project do
