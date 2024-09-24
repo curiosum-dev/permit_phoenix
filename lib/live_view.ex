@@ -43,12 +43,10 @@ defmodule Permit.Phoenix.LiveView do
   alias PermitPhoenix.RecordNotFoundError
 
   import Phoenix.LiveView
+  import PermitPhoenix.Macros
 
+  permit_ecto_callbacks()
   @callback resource_module() :: module()
-  if :ok == Application.ensure_loaded(:permit_ecto) do
-    @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
-    @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
-  end
 
   @callback handle_unauthorized(Types.action_group(), PhoenixTypes.socket()) ::
               PhoenixTypes.hook_outcome()
@@ -157,8 +155,7 @@ defmodule Permit.Phoenix.LiveView do
         end
 
         @impl true
-        def finalize_query(query, resolution_context),
-          do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
+        def finalize_query(query, %{}), do: query
       end
 
       @impl true
@@ -285,34 +282,6 @@ defmodule Permit.Phoenix.LiveView do
       fun when is_function(fun) -> fun.(action, socket)
       path -> path
     end
-  end
-
-  if :ok == Application.ensure_loaded(:permit_ecto) do
-    @doc false
-    def base_query(
-          %{
-            action: action,
-            resource_module: resource_module,
-            socket: socket,
-            params: params
-          },
-          opts
-        ) do
-      param = __MODULE__.id_param_name(action, socket, opts)
-      field = __MODULE__.id_struct_field_name(action, socket, opts)
-
-      case params do
-        %{^param => id} ->
-          resource_module
-          |> Permit.Ecto.filter_by_field(field, id)
-
-        _ ->
-          Permit.Ecto.from(resource_module)
-      end
-    end
-
-    @doc false
-    def finalize_query(query, %{}, _opts), do: query
   end
 
   @doc false
