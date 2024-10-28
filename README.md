@@ -1,5 +1,10 @@
 # Permit.Phoenix
 
+[![Hex version badge](https://img.shields.io/hexpm/v/permit_phoenix.svg)](https://hex.pm/packages/permit_phoenix)
+[![Actions Status](https://github.com/curiosum-dev/permit_phoenix/actions/workflows/elixir.yml/badge.svg)](https://github.com/curiosum-dev/permit_phoenix/actions)
+[![Code coverage badge](https://img.shields.io/codecov/c/github/curiosum-dev/permit_phoenix/master.svg)](https://codecov.io/gh/curiosum-dev/permit_phoenix/branch/master)
+[![License badge](https://img.shields.io/hexpm/l/permit_phoenix.svg)](https://github.com/curiosum-dev/permit_phoenix/blob/master/LICENSE.md)
+
 [Phoenix Framework](https://hexdocs.pm/phoenix) and [LiveView](https://hexdocs.pm/phoenix_live_view) integration for [Permit](https://hexdocs.pm/permit) authorization library.
 
 ## Purpose and usage
