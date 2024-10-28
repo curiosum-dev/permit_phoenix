@@ -3,7 +3,6 @@ defmodule Permit.Phoenix.Types do
   Defines types for usage with Permit in the context of Phoenix applications.
   """
 
-  alias Permit.Ecto.Types, as: EctoTypes
   alias Permit.Types
 
   # Phoenix-specific types
@@ -37,7 +36,7 @@ defmodule Permit.Phoenix.Types do
   """
   @type handle_unauthorized :: (Types.action_group(), conn() -> conn())
 
-  if :ok == Application.ensure_loaded(:permit_ecto) do
+  if Mix.Dep.Lock.read()[:permit_ecto] do
     @typedoc """
     - `:authorization_module` -- (Required) The app's authorization module that uses `use Permit`.
     - `preload_actions` -- (Optional) The list of actions that resources will be preloaded and authorized in, in addition to :show, :delete, :edit and :update.

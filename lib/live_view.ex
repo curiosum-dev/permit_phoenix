@@ -45,7 +45,8 @@ defmodule Permit.Phoenix.LiveView do
   import Phoenix.LiveView
 
   @callback resource_module() :: module()
-  if :ok == Application.ensure_loaded(:permit_ecto) do
+
+  if Mix.Dep.Lock.read()[:permit_ecto] do
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
   end
@@ -65,10 +66,10 @@ defmodule Permit.Phoenix.LiveView do
   @callback event_mapping() :: map()
 
   @optional_callbacks [
-                        if(:ok == Application.ensure_loaded(:permit_ecto),
+                        if(Mix.Dep.Lock.read()[:permit_ecto],
                           do: {:base_query, 1}
                         ),
-                        if(:ok == Application.ensure_loaded(:permit_ecto),
+                        if(Mix.Dep.Lock.read()[:permit_ecto],
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
@@ -88,7 +89,7 @@ defmodule Permit.Phoenix.LiveView do
     quote generated: true do
       import unquote(__MODULE__)
 
-      if :ok == Application.ensure_loaded(:permit_ecto) do
+      if Mix.Dep.Lock.read()[:permit_ecto] do
         require Ecto.Query
       end
 
@@ -135,7 +136,7 @@ defmodule Permit.Phoenix.LiveView do
       @impl true
       def except, do: unquote(opts[:except]) || []
 
-      if :ok == Application.ensure_loaded(:permit_ecto) do
+      if Mix.Dep.Lock.read()[:permit_ecto] do
         @impl true
         def base_query(%{
               action: action,
@@ -173,10 +174,10 @@ defmodule Permit.Phoenix.LiveView do
 
       defoverridable(
         [
-          if(:ok == Application.ensure_loaded(:permit_ecto),
+          if(Mix.Dep.Lock.read()[:permit_ecto],
             do: {:base_query, 1}
           ),
-          if(:ok == Application.ensure_loaded(:permit_ecto),
+          if(Mix.Dep.Lock.read()[:permit_ecto],
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
@@ -256,7 +257,7 @@ defmodule Permit.Phoenix.LiveView do
         {:halt,
          socket
          |> put_flash(:error, socket.view.unauthorized_message(action, socket))
-         |> push_redirect(to: socket.view.fallback_path(action, socket))}
+         |> push_navigate(to: socket.view.fallback_path(action, socket))}
 
       fun when is_function(fun) ->
         fun.(action, socket)
@@ -287,8 +288,9 @@ defmodule Permit.Phoenix.LiveView do
     end
   end
 
-  if :ok == Application.ensure_loaded(:permit_ecto) do
+  if Mix.Dep.Lock.read()[:permit_ecto] do
     @doc false
+
     def base_query(
           %{
             action: action,
@@ -301,13 +303,14 @@ defmodule Permit.Phoenix.LiveView do
       param = __MODULE__.id_param_name(action, socket, opts)
       field = __MODULE__.id_struct_field_name(action, socket, opts)
 
+      # since Permit.Ecto may not be loaded, we use apply/3 to call the function
+      # to suppress warnings
       case params do
         %{^param => id} ->
-          resource_module
-          |> Permit.Ecto.filter_by_field(field, id)
+          apply(Permit.Ecto, :filter_by_field, [resource_module, field, id])
 
         _ ->
-          Permit.Ecto.from(resource_module)
+          apply(Permit.Ecto, :from, [resource_module])
       end
     end
 
