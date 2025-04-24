@@ -10,7 +10,8 @@ defmodule Permit.EctoPlugTest.RouterHelper do
 
   defmacro __using__(_) do
     quote do
-      use Plug.Test
+      import Plug.Test
+      import Plug.Conn
       import Permit.EctoPlugTest.RouterHelper
     end
   end
