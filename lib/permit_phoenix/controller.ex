@@ -73,7 +73,7 @@ defmodule Permit.Phoenix.Controller do
   """
   @callback resource_module() :: Types.resource_module()
 
-  if :ok == Application.ensure_loaded(:permit_ecto) do
+  if Mix.Dep.Lock.read()[:permit_ecto] do
     @doc ~S"""
     Creates the basis for an Ecto query constructed by `Permit.Ecto` based on controller action, resource module, subject (typically `:current_user`) and controller params.
 
@@ -214,10 +214,10 @@ defmodule Permit.Phoenix.Controller do
   @callback unauthorized_message(Types.action_group(), PhoenixTypes.conn()) :: binary()
 
   @optional_callbacks [
-                        if(:ok == Application.ensure_loaded(:permit_ecto),
+                        if(Mix.Dep.Lock.read()[:permit_ecto],
                           do: {:base_query, 1}
                         ),
-                        if(:ok == Application.ensure_loaded(:permit_ecto),
+                        if(Mix.Dep.Lock.read()[:permit_ecto],
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
@@ -279,7 +279,7 @@ defmodule Permit.Phoenix.Controller do
         unquote(__MODULE__).except(unquote(opts))
       end
 
-      if :ok == Application.ensure_loaded(:permit_ecto) do
+      if Mix.Dep.Lock.read()[:permit_ecto] do
         @impl true
         def base_query(%{
               action: action,
@@ -322,10 +322,10 @@ defmodule Permit.Phoenix.Controller do
 
       defoverridable(
         [
-          if(:ok == Application.ensure_loaded(:permit_ecto),
+          if(Mix.Dep.Lock.read()[:permit_ecto],
             do: {:base_query, 1}
           ),
-          if(:ok == Application.ensure_loaded(:permit_ecto),
+          if(Mix.Dep.Lock.read()[:permit_ecto],
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
@@ -435,7 +435,7 @@ defmodule Permit.Phoenix.Controller do
     end
   end
 
-  if :ok == Application.ensure_loaded(:permit_ecto) do
+  if Mix.Dep.Lock.read()[:permit_ecto] do
     @doc false
     def base_query(
           %{

@@ -83,6 +83,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   """
 
   alias Permit.Phoenix.Types, as: PhoenixTypes
+  alias Permit.Types
 
   # These two modules will be checked for the existence of the assign/3 function.
   # If neither exists (no LiveView dependency in a project), no failure happens.
