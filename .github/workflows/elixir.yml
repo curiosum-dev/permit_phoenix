@@ -24,7 +24,7 @@ jobs:
       uses: erlef/setup-beam@v1
       with:
         elixir-version: '1.17'
-        otp-version: '26'
+        otp-version: '27'
       env:
         ImageOS: ubuntu22
     - name: Restore dependencies cache
@@ -59,7 +59,7 @@ jobs:
     strategy:
       matrix:
         elixir_version: ['1.13', '1.14', '1.15', '1.16', '1.17']
-        otp_version: ['24', '25', '26', '27']
+        otp_version: ['27']
         phoenix_version: ['1.7.21', '1.6.16']
         phoenix_live_view_version: ['1.0.10', '0.20.17', '0.19.5', '0.18.18', '0.17.14']
         exclude:
