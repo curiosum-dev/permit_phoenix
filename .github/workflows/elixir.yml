@@ -2,9 +2,9 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -17,12 +17,14 @@ jobs:
   build:
 
     name: Build and test
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
 
     strategy:
       matrix:
         elixir_version: ['1.12', '1.13', '1.14', '1.15', '1.16', '1.17']
         otp_version: ['24', '25', '26', '27']
+        phoenix_version: ['1.7.21', '1.6.16']
+        phoenix_live_view_version: ['1.0.10', '0.20.17', '0.19.5', '0.18.18', '0.17.14']
         exclude:
           - elixir_version: '1.12'
             otp_version: '25'
@@ -71,6 +73,9 @@ jobs:
        sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
     - name: Install dependencies
       run: mix deps.get
+      env:
+        LIVE_VIEW_VERSION: ${{ matrix.phoenix_live_view_version }}
+        PHOENIX_VERSION: ${{ matrix.phoenix_version }}
     - name: Create DB
       run: mix do ecto.create, ecto.migrate
     - name: Dialyzer
