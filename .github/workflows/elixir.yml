@@ -37,7 +37,7 @@ jobs:
       run: |
         sudo service postgresql start
         sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-        sudo -u postgres psql -c "CREATE DATABASE permit_test;"
+        sudo -u postgres psql -c "DROP DATABASE IF EXISTS permit_test;"
     - name: Install dependencies
       run: mix deps.get
       env:
