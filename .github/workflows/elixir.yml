@@ -14,8 +14,45 @@ env:
   ImageOS: ubuntu22
 
 jobs:
+  lint:
+    name: Setup and Lint
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.17'
+        otp-version: '26'
+      env:
+        ImageOS: ubuntu22
+    - name: Restore dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Set up Postgres
+      run: |
+        sudo service postgresql start
+        sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+        sudo -u postgres psql -c "CREATE DATABASE permit_test;"
+    - name: Install dependencies
+      run: mix deps.get
+      env:
+        LIVE_VIEW_VERSION: '0.20.17'
+        PHOENIX_VERSION: '1.7.21'
+    - name: Create DB
+      run: mix do ecto.create, ecto.migrate
+    - name: Dialyzer
+      run: MIX_ENV=test mix dialyzer
+    - name: Credo
+      run: MIX_ENV=test mix credo
+
   build:
     name: Build and test
+    needs: lint
     runs-on: self-hosted
 
     strategy:
@@ -54,8 +91,8 @@ jobs:
     - name: Set up Elixir
       uses: erlef/setup-beam@v1
       with:
-        elixir-version: ${{ matrix.elixir_version }} # Define the elixir version [required]
-        otp-version: ${{ matrix.otp_version }} # Define the OTP version [required]
+        elixir-version: ${{ matrix.elixir_version }}
+        otp-version: ${{ matrix.otp_version }}
       env:
         ImageOS: ubuntu22
     - name: Restore dependencies cache
@@ -64,12 +101,6 @@ jobs:
         path: deps
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
         restore-keys: ${{ runner.os }}-mix-
-    - name: Set up Postgres
-      run: |
-       sudo apt-get update
-       sudo apt-get install -y postgresql
-       sudo service postgresql start
-       sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
     - name: Install dependencies
       run: mix deps.get
       env:
@@ -77,10 +108,6 @@ jobs:
         PHOENIX_VERSION: ${{ matrix.phoenix_version }}
     - name: Create DB
       run: mix do ecto.create, ecto.migrate
-    - name: Dialyzer
-      run: MIX_ENV=test mix dialyzer
-    - name: Credo
-      run: MIX_ENV=test mix credo
     - name: Run tests
       run: mix coveralls.json
     - name: Upload coverage reports to Codecov
