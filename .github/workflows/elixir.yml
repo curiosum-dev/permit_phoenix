@@ -57,6 +57,7 @@ jobs:
     runs-on: self-hosted
 
     strategy:
+      fail-fast: false
       matrix:
         elixir_version: ['1.13', '1.14', '1.15', '1.16', '1.17']
         otp_version: ['27']
