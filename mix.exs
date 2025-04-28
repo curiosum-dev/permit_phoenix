@@ -26,7 +26,6 @@ defmodule Permit.Phoenix.MixProject do
         "coveralls.html": :test,
         "coveralls.json": :test
       ]
-
     ]
   end
 
@@ -84,7 +83,7 @@ defmodule Permit.Phoenix.MixProject do
   end
 
   defp live_view_version do
-    System.get_env("LIVE_VIEW_VERSION", "~> 0.17")
+    System.get_env("LIVE_VIEW_VERSION", ">= 0.17.0")
   end
 
   defp phoenix_version do
