@@ -165,9 +165,12 @@ defmodule Permit.Phoenix.Plug do
         ) ::
           Plug.Conn.t()
   defp authorize_and_preload_resource(conn, opts, action, subject, resource_module) do
+    controller_module = Phoenix.Controller.controller_module(conn)
+
     authorization_module = Keyword.fetch!(opts, :authorization_module)
-    actions_module = authorization_module.actions_module()
-    number = if action in actions_module.singular_actions(), do: :one, else: :all
+
+    # actions_module = authorization_module.actions_module()
+    number = if action in controller_module.singular_actions(), do: :one, else: :all
 
     meta =
       %{
