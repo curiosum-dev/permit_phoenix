@@ -11,12 +11,25 @@ permissions:
 
 env:
   MIX_ENV: test
-  ImageOS: ubuntu22
 
 jobs:
   lint:
     name: Setup and Lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - uses: actions/checkout@v4
@@ -25,20 +38,13 @@ jobs:
       with:
         elixir-version: '1.17'
         otp-version: '27'
-      env:
-        ImageOS: ubuntu22
     - name: Restore dependencies cache
       uses: actions/cache@v4
       with:
         path: deps
-        key: ${{ runner.os }}-elixir-1.17-otp-26-mix-${{ hashFiles('**/mix.lock') }}
+        key: ${{ runner.os }}-elixir-1.17-otp-27-mix-${{ hashFiles('**/mix.lock') }}
         restore-keys: |
-          ${{ runner.os }}-elixir-1.17-otp-26-mix-
-    - name: Set up Postgres
-      run: |
-        sudo service postgresql start
-        sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-        sudo -u postgres psql -c "DROP DATABASE IF EXISTS permit_test;"
+          ${{ runner.os }}-elixir-1.17-otp-27-mix-
     - name: Install dependencies
       run: mix deps.get
       env:
@@ -54,7 +60,21 @@ jobs:
   build:
     name: Build and test
     needs: lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     strategy:
       fail-fast: false
@@ -85,8 +105,6 @@ jobs:
       with:
         elixir-version: ${{ matrix.elixir_version }}
         otp-version: ${{ matrix.otp_version }}
-      env:
-        ImageOS: ubuntu22
     - name: Restore dependencies cache
       uses: actions/cache@v4
       with:
