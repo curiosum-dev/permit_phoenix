@@ -56,8 +56,8 @@ defmodule Permit.Phoenix.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:permit, "~> 0.2"},
-      {:permit_ecto, "~> 0.2.1", only: :test},
+      {:permit, path: "../permit"},
+      {:permit_ecto, path: "../permit_ecto", only: :test},
       {:ecto, "~> 3.0", only: :test},
       {:ecto_sql, "~> 3.0", only: :test},
       {:postgrex, "~> 0.16", only: :test},

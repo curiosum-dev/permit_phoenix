@@ -1,32 +1,59 @@
 defmodule Permit.Phoenix.Actions do
   @moduledoc """
-  Extends the predefined `Permit.Actions.CrudActions` module and defines the following action mapping - usually applicable for most Phoenix applications:
+  Provides actions from a Phoenix router module.
 
-  | **Action** | **Required permission** |
-  |------------|-------------------------|
-  | `:index`   | `:read`                 |
-  | `:show`    | `:read`                 |
-  | `:edit`    | `:update`               |
-  | `:new`     | `:create`               |
-  | `:delete`  | itself                  |
-  | `:update`  | itself                  |
-  | `:create`  | itself                  |
+  Example:
 
-  For more information on defining and mapping actions, see `Permit.Actions` documentation.
+      defmodule MyApp.Router do
+        # ...
+
+        get("/items/:id", MyApp.ItemController, :view)
+      end
+
+      defmodule MyApp.Actions do
+        use Permit.Actions
+
+        # Merge the actions from the router into the default grouping schema.
+        def grouping_schema do
+          Permit.Phoenix.Actions.Defaults.grouping_schema()
+          |> Permit.Phoenix.Actions.merge_from_router(MyApp.Router)
+        end
+      end
+
+      defmodule MyApp.Permissions do
+        # Use the actions module to define permissions.
+        use Permit.Permissions, actions_module: MyApp.Actions
+
+        def can(:admin = _role) do
+          permit()
+          |> all(Item)
+        end
+
+        # The `view` action is automatically added to the grouping schema
+        # and hence available as a `view/2`function when defining permissions.
+        def can(:owner = _role) do
+          permit()
+          |> view(Item)
+          |> all(Item, fn user, item -> item.owner_id == user.id end)
+        end
+
+      end
   """
-  use Permit.Actions
 
-  @impl Permit.Actions
-  def grouping_schema do
-    %{
-      new: [:create],
-      index: [:read],
-      show: [:read],
-      edit: [:update]
-    }
-    |> Map.merge(crud_grouping())
+  def merge_from_router(grouping_schema, router_module) do
+    actions_from_router(router_module)
+    |> Enum.reduce(grouping_schema, fn action, acc ->
+      if !Map.has_key?(acc, action), do: Map.put(acc, action, []), else: acc
+    end)
   end
 
-  def singular_actions,
-    do: [:show, :edit, :new, :delete, :update]
+  defp actions_from_router(router_module) do
+    router_module.__routes__()
+    |> Stream.filter(fn route ->
+      is_atom(route.plug_opts) and is_atom(route.plug) and Code.ensure_loaded?(route.plug) and
+        function_exported?(route.plug, route.plug_opts, 2)
+    end)
+    |> Stream.map(fn route -> route.plug_opts end)
+    |> Enum.uniq()
+  end
 end

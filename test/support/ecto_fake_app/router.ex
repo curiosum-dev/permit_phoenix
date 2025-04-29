@@ -31,4 +31,11 @@ defmodule Permit.EctoFakeApp.Router do
       :action_without_authorizing
     )
   end
+
+  scope "/action_plurality" do
+    pipe_through(:browser)
+
+    get("/", Permit.EctoFakeApp.ActionPluralityController, :list)
+    get("/:id", Permit.EctoFakeApp.ActionPluralityController, :view)
+  end
 end
