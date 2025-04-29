@@ -2,35 +2,72 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
 
 env:
   MIX_ENV: test
-  ImageOS: ubuntu22
 
 jobs:
-  build:
+  lint:
+    name: Setup and Lint
+    runs-on: ubuntu-latest
 
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.17'
+        otp-version: '27'
+    - name: Restore dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: deps
+        key: ${{ runner.os }}-elixir-1.17-otp-27-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-elixir-1.17-otp-27-mix-
+    - name: Install dependencies
+      run: mix deps.get
+      env:
+        LIVE_VIEW_VERSION: '0.20.17'
+        PHOENIX_VERSION: '1.7.21'
+    - name: Dialyzer
+      run: MIX_ENV=test mix dialyzer
+    - name: Credo
+      run: MIX_ENV=test mix credo
+
+  build:
     name: Build and test
-    runs-on: ubuntu-22.04
+    needs: lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     strategy:
+      fail-fast: false
       matrix:
-        elixir_version: ['1.12', '1.13', '1.14', '1.15', '1.16', '1.17']
-        otp_version: ['24', '25', '26', '27']
+        elixir_version: ['1.13', '1.14', '1.15', '1.16', '1.17']
+        otp_version: ['26', '27']
+        phoenix_version: ['1.7.21', '1.6.16']
+        phoenix_live_view_version: ['1.0.10', '0.20.17', '0.19.5', '0.18.18', '0.17.14']
         exclude:
-          - elixir_version: '1.12'
-            otp_version: '25'
-          - elixir_version: '1.12'
-            otp_version: '26'
-          - elixir_version: '1.12'
-            otp_version: '27'
-
           - elixir_version: '1.13'
             otp_version: '26'
           - elixir_version: '1.13'
@@ -45,38 +82,27 @@ jobs:
           - elixir_version: '1.16'
             otp_version: '27'
 
-          - elixir_version: '1.17'
-            otp_version: '24'
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Elixir
       uses: erlef/setup-beam@v1
       with:
-        elixir-version: ${{ matrix.elixir_version }} # Define the elixir version [required]
-        otp-version: ${{ matrix.otp_version }} # Define the OTP version [required]
-      env:
-        ImageOS: ubuntu22
+        elixir-version: ${{ matrix.elixir_version }}
+        otp-version: ${{ matrix.otp_version }}
     - name: Restore dependencies cache
       uses: actions/cache@v4
       with:
         path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
-    - name: Set up Postgres
-      run: |
-       sudo apt-get update
-       sudo apt-get install -y postgresql
-       sudo service postgresql start
-       sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+        key: ${{ runner.os }}-elixir-${{ matrix.elixir_version }}-otp-${{ matrix.otp_version }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-elixir-${{ matrix.elixir_version }}-otp-${{ matrix.otp_version }}-mix-
     - name: Install dependencies
       run: mix deps.get
+      env:
+        LIVE_VIEW_VERSION: ${{ matrix.phoenix_live_view_version }}
+        PHOENIX_VERSION: ${{ matrix.phoenix_version }}
     - name: Create DB
       run: mix do ecto.create, ecto.migrate
-    - name: Dialyzer
-      run: MIX_ENV=test mix dialyzer
-    - name: Credo
-      run: MIX_ENV=test mix credo
     - name: Run tests
       run: mix coveralls.json
     - name: Upload coverage reports to Codecov

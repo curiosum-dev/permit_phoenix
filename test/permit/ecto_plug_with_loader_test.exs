@@ -34,7 +34,8 @@ defmodule Permit.EctoPlugWithLoaderTest do
 
     test "should assign flash error", %{conn: conn} do
       conn = call(conn, :get, "/blogs/10")
-      assert conn.assigns.flash["error"] == "Record not found"
+      # When dropping Phoenix 1.6 compatibility, we can use conn.assigns.flash["error"]
+      assert Phoenix.ConnTest.get_flash(conn, :error) == "Record not found"
     end
   end
 

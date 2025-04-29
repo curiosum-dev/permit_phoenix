@@ -257,7 +257,7 @@ defmodule Permit.Phoenix.LiveView do
         {:halt,
          socket
          |> put_flash(:error, socket.view.unauthorized_message(action, socket))
-         |> push_navigate(to: socket.view.fallback_path(action, socket))}
+         |> navigate(to: socket.view.fallback_path(action, socket))}
 
       fun when is_function(fun) ->
         fun.(action, socket)
@@ -346,6 +346,14 @@ defmodule Permit.Phoenix.LiveView do
 
       struct_field_name_fn when is_function(struct_field_name_fn) ->
         struct_field_name_fn.(action, socket)
+    end
+  end
+
+  defp navigate(socket, arg) do
+    if function_exported?(Phoenix.LiveView, :push_navigate, 2) do
+      apply(Phoenix.LiveView, :push_navigate, [socket, arg])
+    else
+      apply(Phoenix.LiveView, :push_redirect, [socket, arg])
     end
   end
 end

@@ -26,3 +26,5 @@ permit_ecto-*.tar
 /tmp/
 
 .DS_Store
+
+.elixir_ls/

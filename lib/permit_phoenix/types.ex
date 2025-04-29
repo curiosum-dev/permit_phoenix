@@ -50,8 +50,8 @@ defmodule Permit.Phoenix.Types do
 
     @type plug_opts :: [
             authorization_module: Types.authorization_module(),
-            base_query: EctoTypes.base_query(),
-            finalize_query: EctoTypes.finalize_query(),
+            base_query: Permit.Ecto.Types.base_query(),
+            finalize_query: Permit.Ecto.Types.finalize_query(),
             resource_module: Types.resource_module(),
             preload_actions: action_list(),
             id_param_name: id_param_name(),

@@ -87,6 +87,6 @@ defmodule Permit.Phoenix.MixProject do
   end
 
   defp phoenix_version do
-    System.get_env("LIVE_VIEW_VERSION", "~> 1.6")
+    System.get_env("PHOENIX_VERSION", "~> 1.6")
   end
 end
