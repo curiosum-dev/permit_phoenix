@@ -17,20 +17,6 @@ jobs:
     name: Setup and Lint
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:14
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Elixir
@@ -50,8 +36,6 @@ jobs:
       env:
         LIVE_VIEW_VERSION: '0.20.17'
         PHOENIX_VERSION: '1.7.21'
-    - name: Create DB
-      run: mix do ecto.create, ecto.migrate
     - name: Dialyzer
       run: MIX_ENV=test mix dialyzer
     - name: Credo
