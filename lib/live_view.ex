@@ -5,6 +5,29 @@ defmodule Permit.Phoenix.LiveView do
 
       defmodule MyAppWeb.DocumentLive.Index
         use Permit.Phoenix.LiveView
+
+        @impl true
+        def resource_module, do: Document
+
+        # Override default action groupings if needed
+        @impl true
+        def action_grouping do
+          %{
+            new: [:create],
+            index: [:read],
+            show: [:read],
+            edit: [:update],
+            create: [:create],
+            update: [:update],
+            delete: [:delete]
+          }
+        end
+
+        # Override singular actions if needed
+        @impl true
+        def singular_actions do
+          [:show, :edit, :new, :delete, :update]
+        end
       end
 
   which adds the LiveViewAuthorization behavior with the following callbacks to be implemented -
@@ -45,6 +68,18 @@ defmodule Permit.Phoenix.LiveView do
   import Phoenix.LiveView
 
   @callback resource_module() :: module()
+
+  @doc """
+  Defines the action grouping schema for this live view.
+  This can be overridden in individual live views to customize the action mapping.
+  """
+  @callback action_grouping() :: map()
+
+  @doc """
+  Defines which actions are considered singular (operating on a single resource).
+  This can be overridden in individual live views to customize the singular actions.
+  """
+  @callback singular_actions() :: [atom()]
 
   if Mix.Dep.Lock.read()[:permit_ecto] do
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
@@ -192,6 +227,17 @@ defmodule Permit.Phoenix.LiveView do
         ]
         |> Enum.filter(& &1)
       )
+
+      # Default implementations
+      @impl true
+      def action_grouping do
+        Permit.Phoenix.Actions.grouping_schema()
+      end
+
+      @impl true
+      def singular_actions do
+        Permit.Phoenix.Actions.singular_actions()
+      end
     end
   end
 

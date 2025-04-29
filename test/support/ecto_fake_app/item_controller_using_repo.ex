@@ -12,7 +12,11 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepo do
     fallback_path: "/?foo"
 
   def index(conn, _params), do: text(conn, "listing all items")
-  def show(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))
+
+  def show(conn, _params) do
+    text(conn, inspect(conn.assigns[:loaded_resource]))
+  end
+
   def edit(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))
   def delete(conn, params), do: text(conn, "deleting item #{params["id"]}")
   def details(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))

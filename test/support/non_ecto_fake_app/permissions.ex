@@ -1,6 +1,6 @@
 defmodule Permit.NonEctoFakeApp.Permissions do
   @moduledoc false
-  use Permit.Permissions, actions_module: Permit.Phoenix.Actions
+  use Permit.Permissions, actions_module: Permit.NonEctoFakeApp.Actions
 
   alias Permit.NonEctoFakeApp.Item
   alias Permit.NonEctoFakeApp.User

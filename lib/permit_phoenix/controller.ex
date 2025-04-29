@@ -20,10 +20,25 @@ defmodule Permit.Phoenix.Controller do
         @impl true
         def resource_module, do: MyApp.Item
 
-        # you might or might not want to override something here
-
+        # Override default action groupings if needed
         @impl true
-        def fallback_path: "/foo"
+        def action_grouping do
+          %{
+            new: [:create],
+            index: [:read],
+            show: [:read],
+            edit: [:update],
+            create: [:create],
+            update: [:update],
+            delete: [:delete]
+          }
+        end
+
+        # Override singular actions if needed
+        @impl true
+        def singular_actions do
+          [:show, :edit, :new, :delete, :update]
+        end
       end
 
   """
@@ -47,6 +62,18 @@ defmodule Permit.Phoenix.Controller do
         use Permit, permissions_module: MyApp.Permissions
   """
   @callback authorization_module() :: Types.authorization_module()
+
+  @doc """
+  Defines the action grouping schema for this controller.
+  This can be overridden in individual controllers to customize the action mapping.
+  """
+  @callback action_grouping() :: map()
+
+  @doc """
+  Defines which actions are considered singular (operating on a single resource).
+  This can be overridden in individual controllers to customize the singular actions.
+  """
+  @callback singular_actions() :: [atom()]
 
   @doc ~S"""
   Declares the controller's resource module. For instance, when Phoenix and Ecto is used, typically for an `ArticleController` the resource will be an `Article` Ecto schema.
@@ -320,6 +347,16 @@ defmodule Permit.Phoenix.Controller do
         unquote(__MODULE__).fetch_subject(conn, unquote(opts))
       end
 
+      @impl true
+      def action_grouping do
+        Permit.Phoenix.Actions.grouping_schema()
+      end
+
+      @impl true
+      def singular_actions do
+        unquote(opts)[:authorization_module].permissions_module().actions_module().singular_actions()
+      end
+
       defoverridable(
         [
           if(Mix.Dep.Lock.read()[:permit_ecto],
@@ -337,7 +374,9 @@ defmodule Permit.Phoenix.Controller do
           id_param_name: 2,
           id_struct_field_name: 2,
           handle_not_found: 1,
-          unauthorized_message: 2
+          unauthorized_message: 2,
+          action_grouping: 0,
+          singular_actions: 0
         ]
         |> Enum.filter(& &1)
       )
