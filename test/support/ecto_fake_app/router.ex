@@ -1,6 +1,7 @@
 defmodule Permit.EctoFakeApp.Router do
   @moduledoc false
   use Phoenix.Router
+  import Phoenix.LiveView.Router
 
   pipeline :browser do
     plug(Plug.Session,

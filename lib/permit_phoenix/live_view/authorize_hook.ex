@@ -170,7 +170,6 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     use_loader? = socket.view.use_loader?()
 
     authorization_module = socket.view.authorization_module()
-    actions_module = authorization_module.actions_module()
     resolver_module = authorization_module.resolver_module()
     resource_module = socket.view.resource_module()
 
@@ -178,7 +177,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     loader = &socket.view.loader/1
     finalize_query = &socket.view.finalize_query/2
     subject = socket.assigns.current_user
-    singular? = action in actions_module.singular_actions()
+    singular? = action in socket.view.singular_actions()
 
     {load_key, other_key, auth_function} =
       if singular? do
