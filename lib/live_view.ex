@@ -207,6 +207,17 @@ defmodule Permit.Phoenix.LiveView do
         unquote(__MODULE__).id_struct_field_name(action, socket, unquote(opts))
       end
 
+      # Default implementations
+      @impl true
+      def action_grouping do
+        Permit.Phoenix.Actions.grouping_schema()
+      end
+
+      @impl true
+      def singular_actions do
+        unquote(opts)[:authorization_module].permissions_module().actions_module().singular_actions()
+      end
+
       defoverridable(
         [
           if(Mix.Dep.Lock.read()[:permit_ecto],
@@ -223,21 +234,12 @@ defmodule Permit.Phoenix.LiveView do
           id_param_name: 2,
           id_struct_field_name: 2,
           handle_not_found: 1,
-          unauthorized_message: 2
+          unauthorized_message: 2,
+          action_grouping: 0,
+          singular_actions: 0
         ]
         |> Enum.filter(& &1)
       )
-
-      # Default implementations
-      @impl true
-      def action_grouping do
-        Permit.Phoenix.Actions.grouping_schema()
-      end
-
-      @impl true
-      def singular_actions do
-        Permit.Phoenix.Actions.singular_actions()
-      end
     end
   end
 

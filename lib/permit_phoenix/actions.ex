@@ -85,13 +85,23 @@ defmodule Permit.Phoenix.Actions do
     end)
   end
 
-  defp actions_from_router(router_module) do
+  def actions_from_router(router_module) do
     router_module.__routes__()
-    |> Stream.filter(fn route ->
-      is_atom(route.plug_opts) and is_atom(route.plug) and Code.ensure_loaded?(route.plug) and
-        function_exported?(route.plug, route.plug_opts, 2)
-    end)
+    |> Stream.filter(&is_controller_or_live_route?/1)
     |> Stream.map(fn route -> route.plug_opts end)
     |> Enum.uniq()
+  end
+
+  defp is_controller_or_live_route?(route) do
+    is_controller_route?(route) or is_live_route?(route)
+  end
+
+  defp is_live_route?(route) do
+    !!get_in(route, [:metadata, :phoenix_live_view])
+  end
+
+  defp is_controller_route?(route) do
+    is_atom(route.plug_opts) and is_atom(route.plug) and Code.ensure_loaded?(route.plug) and
+      function_exported?(route.plug, route.plug_opts, 2)
   end
 end

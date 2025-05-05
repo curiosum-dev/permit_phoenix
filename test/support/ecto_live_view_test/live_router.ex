@@ -2,6 +2,7 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
   @moduledoc false
   use Phoenix.Router
   import Phoenix.LiveView.Router
+  alias Permit.EctoFakeApp.ActionPluralityLive
   alias Permit.EctoLiveViewTest.HooksWithLoaderLive
   alias Permit.EctoLiveViewTest.HooksLive
   alias Permit.EctoLiveViewTest.HooksWithCustomOptsLive
@@ -18,6 +19,9 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
     live("/books/new", HooksWithLoaderLive, :new)
     live("/books/:id/edit", HooksWithLoaderLive, :edit)
     live("/books/:id", HooksWithLoaderLive, :show)
+
+    live("/live_action_plurality", ActionPluralityLive, :list)
+    live("/live_action_plurality/:id", ActionPluralityLive, :view)
   end
 
   def session(%Plug.Conn{}, extra), do: Map.merge(extra, %{"called" => true})
