@@ -81,26 +81,26 @@ defmodule Permit.Phoenix.Actions do
   def merge_from_router(grouping_schema, router_module) do
     actions_from_router(router_module)
     |> Enum.reduce(grouping_schema, fn action, acc ->
-      if !Map.has_key?(acc, action), do: Map.put(acc, action, []), else: acc
+      if Map.has_key?(acc, action), do: acc, else: Map.put(acc, action, [])
     end)
   end
 
   def actions_from_router(router_module) do
     router_module.__routes__()
-    |> Stream.filter(&is_controller_or_live_route?/1)
+    |> Stream.filter(&controller_or_live_route?/1)
     |> Stream.map(fn route -> route.plug_opts end)
     |> Enum.uniq()
   end
 
-  defp is_controller_or_live_route?(route) do
-    is_controller_route?(route) or is_live_route?(route)
+  defp controller_or_live_route?(route) do
+    controller_route?(route) or live_route?(route)
   end
 
-  defp is_live_route?(route) do
+  defp live_route?(route) do
     !!get_in(route, [:metadata, :phoenix_live_view])
   end
 
-  defp is_controller_route?(route) do
+  defp controller_route?(route) do
     is_atom(route.plug_opts) and is_atom(route.plug) and Code.ensure_loaded?(route.plug) and
       function_exported?(route.plug, route.plug_opts, 2)
   end
