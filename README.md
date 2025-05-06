@@ -28,6 +28,71 @@ def deps do
 end
 ```
 
+### Configuration
+
+While in basic Permit all actions must be defined in a module implementing the `Permit.Actions` behaviour, in the `grouping_schema/0` callback implementation, in Phoenix it is potentially inconvenient - adding a new controller action name would require adding it to the `grouping_schema/0` implementation every single time.
+
+For this reason, **Permit.Phoenix provides the `Permit.Phoenix.Actions` module**, building upon the standard way of defining action names with `Permit.Actions` and additionally enabling you to automatically define actions based on controller and LiveView actions defined in the router.
+
+```elixir
+defmodule MyApp.Authorization do
+  use Permit.Ecto,
+    permissions_module: MyApp.Permissions,
+    repo: MyApp.Repo
+end
+
+defmodule MyApp.Actions do
+  # Merge the actions from the router into the default grouping schema.
+  use Permit.Phoenix.Actions, router: MyAppWeb.Router
+end
+
+defmodule MyAppWeb.Router do
+  use Phoenix.Router
+  import Phoenix.LiveView.Router
+
+  # :view and :watch will get imported into `MyApp.Actions.grouping_schema/0`.
+  # This way you won't have to add them manually.
+  get("/items/:id/view", MyAppWeb.ItemController, :view)
+  live("/items/:id/watch", MyAppWeb.ItemLive, :watch)
+end
+
+defmodule MyApp.Permissions do
+  @moduledoc false
+  use Permit.Ecto.Permissions, actions_module: MyApp.Actions
+
+  def can(%{id: user_id} = _user) do
+    permit()
+    |> create(MyApp.Item)
+    |> view(MyApp.Item, owner_id: user_id)
+    |> watch(MyApp.Item, owner_id: user_id)
+  end
+
+  def can(_user), do: permit()
+end
+```
+
+The `view/3` and `watch/3` functions are shorthands to `permission_to/4` in which the first argument would've been `:view` or `:watch`, respectively - they're generated based on the module implementing `grouping_schema/0` callback from `Permit.Actions`.
+
+## Default action mapping
+
+By default, `Permit.Phoenix.Actions` provides the following action mapping:
+```elixir
+%{
+  new: [:create],
+  index: [:read],
+  show: [:read],
+  edit: [:update]
+}
+```
+This means that accessing the `:new` action will require the `:create` permission, accessing the `:index` or `:show` action will require the `:read` permission, and accessing `:edit` will require the `:update` permission - this is for convenience when using default Phoenix action names.
+
+```elixir
+def can(_user) do
+  permit()
+  |> read(MyApp.Item) # allows :index and :show
+end
+```
+
 ### Controllers
 
 All options of `Permit.Phoenix.Controller` can be provided as option keywords with `use Permit.Phoenix.Controller` or as callback implementations. For example, defining a `handle_unauthorized: fn action, conn -> ... end` option is equivalent to:
