@@ -28,3 +28,7 @@ permit_ecto-*.tar
 .DS_Store
 
 .elixir_ls/
+
+.tool-versions
+
+.vscode/
