@@ -111,8 +111,6 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
       function_exported?(Phoenix.Component, :assign, 3) ->
         quote do
-          IO.inspect("assign")
-
           unquote(socket)
           |> Phoenix.Component.assign(unquote(key), unquote(value))
           |> then(
