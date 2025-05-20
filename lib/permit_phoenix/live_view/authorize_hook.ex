@@ -241,9 +241,9 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
                                                                               socket ->
       # Handle params-based authorization only if not mounting; otherwise, the authorization
       # has already been done in the on_mount/4 callback implementation.
-      if not Permit.Phoenix.LiveView.mounting?(socket),
-        do: authenticate_and_authorize!(socket, socket.assigns.live_action, session, params),
-        else: {:cont, socket}
+      if Permit.Phoenix.LiveView.mounting?(socket),
+        do: {:cont, socket},
+        else: authenticate_and_authorize!(socket, socket.assigns.live_action, session, params)
     end)
     |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
                                                                             params,
