@@ -78,6 +78,11 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
   @impl true
   def handle_info({:run, func}, socket), do: func.(socket)
 
+  @impl true
+  def use_stream?(socket) do
+    socket.private.connect_info.params["stream"] == "true"
+  end
+
   def run(lv, func) do
     GenServer.call(lv.pid, {:run, func})
   end

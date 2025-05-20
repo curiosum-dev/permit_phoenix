@@ -90,16 +90,36 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   Code.ensure_loaded(Phoenix.LiveView)
   Code.ensure_loaded(Phoenix.Component)
 
-  defmacro live_view_assign(socket_or_assigns, key, value) do
+  defmacro live_view_assign(socket, key, value) do
     cond do
-      Kernel.function_exported?(Phoenix.LiveView, :assign, 3) ->
+      function_exported?(Phoenix.LiveView, :assign, 3) ->
         quote do
-          Phoenix.LiveView.assign(unquote(socket_or_assigns), unquote(key), unquote(value))
+          Phoenix.LiveView.assign(unquote(socket), unquote(key), unquote(value))
         end
 
-      Kernel.function_exported?(Phoenix.Component, :assign, 3) ->
+      function_exported?(Phoenix.LiveView, :stream, 3) ->
         quote do
-          Phoenix.Component.assign(unquote(socket_or_assigns), unquote(key), unquote(value))
+          if is_list(unquote(value)) and unquote(socket).view.use_stream?(unquote(socket)) do
+            unquote(socket)
+            |> Phoenix.LiveView.stream(unquote(key), unquote(value))
+          else
+            # If streams are present, LV is >= 0.18, so we can use the new component assign
+            unquote(socket)
+            |> Phoenix.Component.assign(unquote(key), unquote(value))
+          end
+        end
+
+      function_exported?(Phoenix.Component, :assign, 3) ->
+        quote do
+          IO.inspect("assign")
+
+          unquote(socket)
+          |> Phoenix.Component.assign(unquote(key), unquote(value))
+          |> then(
+            &if is_list(unquote(value)),
+              do: Phoenix.LiveView.stream(&1, unquote(key), unquote(value)),
+              else: &1
+          )
         end
 
       true ->

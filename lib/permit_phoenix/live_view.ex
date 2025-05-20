@@ -99,7 +99,7 @@ defmodule Permit.Phoenix.LiveView do
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
   @callback unauthorized_message(PhoenixTypes.socket(), map()) :: binary()
   @callback event_mapping() :: map()
-
+  @callback use_stream?(PhoenixTypes.socket()) :: boolean()
   @optional_callbacks [
                         if(Mix.Dep.Lock.read()[:permit_ecto],
                           do: {:base_query, 1}
@@ -116,7 +116,8 @@ defmodule Permit.Phoenix.LiveView do
                         id_param_name: 2,
                         id_struct_field_name: 2,
                         handle_not_found: 1,
-                        unauthorized_message: 2
+                        unauthorized_message: 2,
+                        use_stream?: 1
                       ]
                       |> Enum.filter(& &1)
 
@@ -207,6 +208,14 @@ defmodule Permit.Phoenix.LiveView do
         unquote(__MODULE__).id_struct_field_name(action, socket, unquote(opts))
       end
 
+      @impl true
+      def use_stream?(socket) do
+        case unquote(opts[:use_stream?]) do
+          fun when is_function(fun) -> fun.(socket)
+          other -> other
+        end
+      end
+
       # Default implementations
       @impl true
       def action_grouping do
@@ -236,7 +245,8 @@ defmodule Permit.Phoenix.LiveView do
           handle_not_found: 1,
           unauthorized_message: 2,
           action_grouping: 0,
-          singular_actions: 0
+          singular_actions: 0,
+          use_stream?: 1
         ]
         |> Enum.filter(& &1)
       )
