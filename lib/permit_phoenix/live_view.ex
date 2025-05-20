@@ -211,8 +211,8 @@ defmodule Permit.Phoenix.LiveView do
       @impl true
       def use_stream?(socket) do
         case unquote(opts[:use_stream?]) do
-          fun when is_function(fun) -> fun.(socket)
-          other -> other
+          fun when is_function(fun) -> fun.(socket) || false
+          other -> other || false
         end
       end
 
