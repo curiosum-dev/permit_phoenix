@@ -91,43 +91,24 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   Code.ensure_loaded(Phoenix.Component)
 
   defmacro live_view_assign(socket, key, value) do
-    cond do
-      function_exported?(Phoenix.LiveView, :assign, 3) ->
-        quote do
-          Phoenix.LiveView.assign(unquote(socket), unquote(key), unquote(value))
-        end
-
-      function_exported?(Phoenix.LiveView, :stream, 3) ->
-        quote do
-          if is_list(unquote(value)) and unquote(socket).view.use_stream?(unquote(socket)) do
-            unquote(socket)
-            |> Phoenix.LiveView.stream(unquote(key), unquote(value))
-          else
-            # If streams are present, LV is >= 0.18, so we can use the new component assign
-            unquote(socket)
-            |> Phoenix.Component.assign(unquote(key), unquote(value))
-          end
-        end
-
-      function_exported?(Phoenix.Component, :assign, 3) ->
-        quote do
+    if Mix.Dep.Lock.read()[:phoenix_live_view] do
+      quote do
+        if is_list(unquote(value)) and unquote(socket).view.use_stream?(unquote(socket)) do
+          unquote(socket)
+          |> Phoenix.LiveView.stream(unquote(key), unquote(value))
+        else
           unquote(socket)
           |> Phoenix.Component.assign(unquote(key), unquote(value))
-          |> then(
-            &if is_list(unquote(value)),
-              do: Phoenix.LiveView.stream(&1, unquote(key), unquote(value)),
-              else: &1
-          )
         end
-
-      true ->
-        quote do
-          raise RuntimeError,
-                """
-                Phoenix LiveView is not available.
-                Please add a dependency {:phoenix_live_view, \"~> 0.16\"} to use LiveView integration.
-                """
-        end
+      end
+    else
+      quote do
+        raise RuntimeError,
+              """
+              Phoenix LiveView is not available.
+              Please add a dependency {:phoenix_live_view, \"~> 0.16\"} to use LiveView integration.
+              """
+      end
     end
   end
 
@@ -258,7 +239,11 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     |> Phoenix.LiveView.attach_hook(:params_authorization, :handle_params, fn params,
                                                                               _uri,
                                                                               socket ->
-      authenticate_and_authorize!(socket, socket.assigns.live_action, session, params)
+      # Handle params-based authorization only if not mounting; otherwise, the authorization
+      # has already been done in the on_mount/4 callback implementation.
+      if not Permit.Phoenix.LiveView.mounting?(socket),
+        do: authenticate_and_authorize!(socket, socket.assigns.live_action, session, params),
+        else: {:cont, socket}
     end)
     |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
                                                                             params,

@@ -101,14 +101,12 @@ defmodule Permit.EctoLiveViewTest do
       assert :unauthorized not in Map.keys(assigns)
     end
 
-    if function_exported?(Phoenix.LiveView, :stream, 3) do
-      test "can do :index on items using a stream", %{conn: conn} do
-        {:ok, lv, _html} = live(conn, "/items?stream=true")
+    test "can do :index on items using a stream", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/items?stream=true")
 
-        assigns = get_assigns(lv)
+      assigns = get_assigns(lv)
 
-        assert assigns.streams |> Map.has_key?(:loaded_resources)
-      end
+      assert assigns.streams |> Map.has_key?(:loaded_resources)
     end
 
     test "can do :show on owned item", %{conn: conn} do

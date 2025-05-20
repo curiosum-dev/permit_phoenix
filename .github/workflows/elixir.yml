@@ -66,7 +66,7 @@ jobs:
         elixir_version: ['1.13', '1.14', '1.15', '1.16', '1.17']
         otp_version: ['26', '27']
         phoenix_version: ['1.7.21', '1.6.16']
-        phoenix_live_view_version: ['1.0.10', '0.20.17', '0.19.5', '0.18.18', '0.17.14']
+        phoenix_live_view_version: ['1.0.12', '0.20.17']
         exclude:
           - elixir_version: '1.13'
             otp_version: '26'
