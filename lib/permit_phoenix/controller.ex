@@ -44,7 +44,7 @@ defmodule Permit.Phoenix.Controller do
   """
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.Types
-  alias PermitPhoenix.RecordNotFoundError
+  alias Permit.Phoenix.RecordNotFoundError
 
   import Plug.Conn
   import Phoenix.Controller

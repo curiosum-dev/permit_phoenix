@@ -63,7 +63,7 @@ defmodule Permit.Phoenix.LiveView do
   """
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.Types
-  alias PermitPhoenix.RecordNotFoundError
+  alias Permit.Phoenix.RecordNotFoundError
 
   import Phoenix.LiveView
 
