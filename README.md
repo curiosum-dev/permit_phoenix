@@ -21,9 +21,9 @@ The package can be installed by adding `permit_phoenix` to your list of dependen
 ```elixir
 def deps do
   [
-    {:permit_phoenix, "~> 0.1.0"},
+    {:permit_phoenix, "~> 0.3.0"},
     # :permit_ecto can be omitted if Ecto is not used
-    {:permit_ecto, "~> 0.1.1"}
+    {:permit_ecto, "~> 0.2.4"}
   ]
 end
 ```
@@ -179,6 +179,74 @@ defmodule MyAppWeb.ArticleController do
 end
 ```
 
+#### Using without Ecto
+
+If you're not using Ecto, you can provide a custom loader function:
+
+```elixir
+defmodule MyAppWeb.ArticleController do
+  # Capture a function to be used as loader
+  # (see Permit.Phoenix.Controller.loader/1 callback).
+  use Permit.Phoenix.Controller,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article,
+    loader: &MyApp.ArticleContext.load/1
+
+  # Alternatively, loader function (adhering to the same callback signature)
+  # can be defined directly in a controller.
+  @impl true
+  def loader(%{action: :index, params: params}) do
+    MyApp.ArticleContext.list_articles(params)
+  end
+
+  def loader(%{action: action, params: %{"id" => id}})
+    when action in [:show, :edit, :update, :delete] do
+    MyApp.ArticleContext.get_article(id)
+  end
+end
+```
+
+#### Advanced error handling
+
+```elixir
+defmodule MyAppWeb.ArticleController do
+  use Permit.Phoenix.Controller,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article
+
+  @impl true
+  def handle_unauthorized(action, conn) do
+    case get_format(conn) do
+      "json" ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "Access denied"})
+        |> halt()
+
+      "html" ->
+        conn
+        |> put_flash(:error, "You don't have permission for this action")
+        |> redirect(to: "/")
+        |> halt()
+    end
+  end
+
+  @impl true
+  def handle_not_found(conn) do
+    conn
+    |> put_status(:not_found)
+    |> put_flash(:error, "Resource not found")
+    |> redirect(to: "/")
+    |> halt()
+  end
+
+  @impl true
+  def unauthorized_message(action, conn) do
+    "You cannot #{action} this article"
+  end
+end
+```
+
 ### LiveView
 
 #### Router configuration
@@ -205,6 +273,13 @@ end
 ```
 
 #### LiveView configuration
+
+Permit.Phoenix.LiveView performs authorization at three key points:
+
+1. **During mount** - via the `on_mount: Permit.Phoenix.LiveView.AuthorizeHook`
+2. **During live navigation** - when `handle_params/3` is called and `:live_action` changes
+3. **During events** - when `handle_event/3` is called for events defined in `event_mapping/0`
+
 
 In a similar way to configuring controllers, LiveViews can be configured with option keywords or callback implementations, thus let's omit lengthy examples of both.
 
@@ -246,6 +321,101 @@ defmodule PermitTestWeb.ArticleLive.Index do
   @impl true
   def fetch_subject(_socket, session) do
     # Retrieve the current user from session
+  end
+end
+```
+
+#### Authorizing LiveView Events
+
+You can also authorize Phoenix LiveView events:
+
+```elixir
+defmodule MyAppWeb.ArticleLive.Show do
+  use Permit.Phoenix.LiveView,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article
+
+  @impl true
+  def handle_event("delete", params, socket) do
+    # Event authorization happens automatically based on event_mapping
+    {:noreply, socket}
+  end
+
+  # Customize event to action mapping: "delete" event will be authorized against
+  # Permit rules for :delete action on MyApp.Article.
+  @impl true
+  def event_mapping do
+    %{
+      "delete" => :delete,
+      "archive" => :update,
+      "publish" => :create
+    }
+  end
+end
+```
+
+#### Using streams in LiveView
+
+For better performance with large datasets, you can use streams instead of assigns:
+
+```elixir
+defmodule MyAppWeb.ArticleLive.Index do
+  # Configure Permit.Phoenix.LiveView to use streams in plural actions
+  # such as :index.
+  use Permit.Phoenix.LiveView,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article,
+    use_stream?: true
+
+  # Alternatively, use a callback for conditional stream usage.
+  #
+  # You needn't set use_stream? to false with singular actions, e.g. :show, etc.
+  # - in their case, even if set to true, normal assigns will be used.
+  @impl true
+  def use_stream?(%{assigns: %{live_action: :index}} = _socket), do: true
+  def use_stream?(_socket), do: false
+
+  @impl true
+  def handle_params(_params, _url, socket) do
+    # Resources are now available as the :loaded_resources stream if navigating
+    # to a plural action.
+    {:noreply, socket}
+  end
+end
+```
+
+#### Handling authorization errors in LiveView
+
+LiveView error handling in Permit.Phoenix covers both navigation-based authorization (via `:live_action`) and event-based authorization. Understanding when to use `{:cont, socket}` vs `{:halt, socket}` and the role of navigation is crucial for proper error handling.
+
+Permit.Phoenix provides a useful `mounting?/1` function to help you determine the appropriate error handling response - which may be different depending on whether the page is being rendered server-side, or it is dealing with in-place navigation via `handle_params`.
+
+```elixir
+defmodule MyAppWeb.ArticleLive.Show do
+  use Permit.Phoenix.LiveView,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article
+
+  @impl true
+  def handle_unauthorized(action, socket) do
+    # Use mounting?/1 to determine the appropriate response
+    if mounting?(socket) do
+      # During mount - redirect is required for halt to work properly
+      socket =
+        socket
+        |> put_flash(:error, "Access denied")
+        |> push_navigate(to: ~p"/articles")
+
+      {:halt, socket}  # Must redirect during mount
+    else
+      # During handle_params navigation - can stay on page
+      socket =
+        socket
+        |> assign(:access_denied, true)
+        |> put_flash(:error, "Access denied for this view")
+
+      {:cont, socket}  # Can show inline error during navigation
+    end
   end
 end
 ```
