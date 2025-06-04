@@ -7,22 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
 ### Added
-- Support for automatic inference of action names from controller routes
-- Support for automatic inference of action names from LiveView routes
-- Support for Phoenix LiveView 1.x
+- Support for Phoenix LiveView 1.x (#24)
+
+  Dependency specs have been updated to allow LiveView 1.x usage. GitHub Actions matrix has been updated to include Elixir >= 1.14, OTP >= 26, Phoenix >= 1.6 and LiveView >= 0.20 (going forward, < 1.x will be dropped).
+- Support for automatic inference of action names from controller and LiveView routes (#28).
+
+  Thanks to this, actions corresponding to controller actions and `:live_action` no longer have to be defined explicitly in the actions module. Example:
+  ```elixir
+  defmodule MyApp.Actions do
+    # Merge the actions from the router into the default grouping schema.
+    use Permit.Phoenix.Actions, router: MyAppWeb.Router
+  end
+  ```
+
+- Add option to use streams instead of assigns (d6e2d2d).
+
+  The `use_stream?/1` callback (and `:use_stream?` option key) was added to `Permit.Phoenix.LiveView`, defaulting to `false`. When set to `true`, it directs Permit.Phoenix to insert the loaded-and-authorized resources as the `:loaded_resources` stream, as opposed to an assign key, if dealing with a plural (e.g. `:index`) action. Example:
+  ```elixir
+  defmodule MyApp.SomethingLive do
+    use Permit.Phoenix.LiveView,
+      authorization_module: MyApp.Authorization,
+      resource_module: Something,
+      use_stream?: true
+
+    # Alternatively use callback with socket argument
+    @impl true
+    def use_stream?(%{assigns: %{live_action: _}} = _socket) do
+      # Logic dependent on socket, e.g. taken from :live_action
+      true
+    end
+
+    @impl true
+    def handle_params(_params, _url, socket) do
+      # The :loaded_resources stream is accessible
+      {:noreply, socket}
+    end
+  end
+  ```
 
 ### Fixed
 - Missing alias to Types in AuthorizeHook
-- Permit.Ecto-related callbacks not correctly defined
+- `Permit.Ecto`-related callbacks not correctly defined (#23)
 - Improved detection of Permit.Ecto presence using mix lock data
-- File structure organization: moved live_view.ex file to correct location
+- Fix static checks, dialyzer indications, and Credo warnings
 
 ### Changed
+- [Breaking] Drop LiveView < 0.20 support
+- [Breaking] Skip load-and-authorize in handle_params after mount
 - Updated CI and testing configuration
-- Updated dependencies to fix deprecation warnings
+- Updated development dependencies to fix deprecation warnings
 
-## [0.2.0] - 2023-03-28
+## [0.2.0]
 
 ### Added
 - Support for customizing responses when records are not found with `handle_not_found` callback
@@ -42,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed checks for presence of Permit.Ecto
 - Various compilation warnings and code style improvements
 
-## [0.1.0] - 2022-10-14
+## [0.1.0]
 
 ### Added
 - Initial stable release
