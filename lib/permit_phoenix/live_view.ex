@@ -322,7 +322,7 @@ defmodule Permit.Phoenix.LiveView do
         {_, socket} = socket.view.handle_not_found(socket)
         {:noreply, socket}
 
-      socket.view.authorization_module().can(socket.assigns[:current_user])
+      socket.view.authorization_module().can(socket.private[:permit_subject])
       |> socket.view.authorization_module().do?(action, resource) ->
         fun.()
         {:noreply, socket}

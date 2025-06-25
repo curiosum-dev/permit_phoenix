@@ -106,7 +106,23 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         raise RuntimeError,
               """
               Phoenix LiveView is not available.
-              Please add a dependency {:phoenix_live_view, \"~> 0.16\"} to use LiveView integration.
+              Please add a dependency {:phoenix_live_view, \"~> 1.0\"} to use LiveView integration.
+              """
+      end
+    end
+  end
+
+  defmacro live_view_put_private(socket, key, value) do
+    if Mix.Dep.Lock.read()[:phoenix_live_view] do
+      quote do
+        Phoenix.LiveView.put_private(unquote(socket), unquote(key), unquote(value))
+      end
+    else
+      quote do
+        raise RuntimeError,
+              """
+              Phoenix LiveView is not available.
+              Please add a dependency {:phoenix_live_view, \"~> 1.0\"} to use LiveView integration.
               """
       end
     end
@@ -133,7 +149,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     current_user = socket.view.fetch_subject(socket, session)
     # TODO: Change to use a key that does not potentially conflict with already
     # used :current_user assign.
-    live_view_assign(socket, :current_user, current_user)
+    live_view_put_private(socket, :permit_subject, current_user)
   end
 
   @spec authorize(PhoenixTypes.socket(), Types.action_group(), map()) ::
@@ -154,7 +170,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     resolver_module = authorization_module.resolver_module()
     # TODO: Change to use a key that does not potentially conflict with already
     # used :current_user assign.
-    subject = socket.assigns.current_user
+    subject = socket.private.permit_subject
 
     case resolver_module.authorized?(
            subject,
@@ -179,7 +195,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     base_query = &socket.view.base_query/1
     loader = &socket.view.loader/1
     finalize_query = &socket.view.finalize_query/2
-    subject = socket.assigns.current_user
+    subject = socket.private[:permit_subject]
     singular? = action in socket.view.singular_actions()
 
     {load_key, other_key, auth_function} =

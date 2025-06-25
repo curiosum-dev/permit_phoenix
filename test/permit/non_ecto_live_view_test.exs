@@ -21,12 +21,12 @@ defmodule Permit.NonEctoLiveViewTest do
   describe "admin" do
     setup [:admin_role, :init_session]
 
-    test "sets :current_user assign", %{conn: conn} do
+    test "sets :permit_subject private key", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
 
-      assigns = get_assigns(lv)
+      private = get_private(lv)
 
-      assert %{current_user: %User{id: 1}} = assigns
+      assert %{permit_subject: %User{id: 1}} = private
     end
 
     test "can do :index on items", %{conn: conn} do
@@ -69,12 +69,12 @@ defmodule Permit.NonEctoLiveViewTest do
   describe "owner" do
     setup [:owner_role, :init_session]
 
-    test "sets :current_user assign", %{conn: conn} do
+    test "sets :permit_subject private key", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
 
-      assigns = get_assigns(lv)
+      private = get_private(lv)
 
-      assert %{current_user: %User{id: 1}} = assigns
+      assert %{permit_subject: %User{id: 1}} = private
     end
 
     test "can do :index on items", %{conn: conn} do
@@ -149,12 +149,12 @@ defmodule Permit.NonEctoLiveViewTest do
   describe "inspector" do
     setup [:inspector_role, :init_session]
 
-    test "sets :current_user assign", %{conn: conn} do
+    test "sets :permit_subject private key", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
 
-      assigns = get_assigns(lv)
+      private = get_private(lv)
 
-      assert %{current_user: %User{id: 1}} = assigns
+      assert %{permit_subject: %User{id: 1}} = private
     end
 
     test "can do :index on items", %{conn: conn} do
@@ -502,5 +502,9 @@ defmodule Permit.NonEctoLiveViewTest do
 
   defp get_assigns(lv) do
     HooksLive.run(lv, fn socket -> {:reply, socket.assigns, socket} end)
+  end
+
+  defp get_private(lv) do
+    HooksLive.run(lv, fn socket -> {:reply, socket.private, socket} end)
   end
 end
