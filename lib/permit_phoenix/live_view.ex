@@ -277,7 +277,7 @@ defmodule Permit.Phoenix.LiveView do
   ## Example
 
       @impl true
-          def handle_unauthorized(socket) do
+          def handle_unauthorized(action, socket) do
             if mounting?(socket) do
               {:halt, push_redirect(socket, to: "/foo")}
             else
@@ -295,6 +295,45 @@ defmodule Permit.Phoenix.LiveView do
     RuntimeError -> false
   end
 
+  @doc """
+  Authorize an action on a resource. Uses the handle_unauthorized callback if the action
+  is not authorized.
+
+  ## Example
+
+      def handle_event("update_comment", %{"comment" => comment_params}, socket) do
+        socket
+        |> Permit.Phoenix.LiveView.authorize!(:update, comment, fn ->
+          case Content.update_comment(comment, comment_params) do
+            # ...
+          end
+        end)
+      end
+
+  """
+  @spec authorize!(PhoenixTypes.socket(), Types.action_group(), Types.object(), (-> any())) ::
+          {:noreply, PhoenixTypes.socket()}
+  def authorize!(socket, action, resource, fun) do
+    # TODO: Remove reliance on :current_user - introduce a way to customize it
+    # (like the now-existing fetch_subject/2 callback, but without reliance on session).
+    cond do
+      is_nil(resource) ->
+        # Handle the case where resource was not found
+        {_, socket} = socket.view.handle_not_found(socket)
+        {:noreply, socket}
+
+      socket.view.authorization_module().can(socket.assigns[:current_user])
+      |> socket.view.authorization_module().do?(action, resource) ->
+        fun.()
+        {:noreply, socket}
+
+      true ->
+        # Unpack from {:halt, socket} | {:cont, socket} to format expected by an event handler
+        {_, socket} = socket.view.handle_unauthorized(action, socket)
+        {:noreply, socket}
+    end
+  end
+
   @doc false
   def event_mapping do
     %{
@@ -309,6 +348,8 @@ defmodule Permit.Phoenix.LiveView do
   end
 
   @doc false
+  # TODO: Match not only the action, but also the resource (or resource module) we're manipulating.
+  #       If we're using the authorize!/4 helper, we need to be able to match the resource.
   def handle_unauthorized(action, socket, opts) do
     case opts[:handle_unauthorized] do
       nil ->

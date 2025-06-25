@@ -131,6 +131,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   @spec authenticate(PhoenixTypes.socket(), map()) :: PhoenixTypes.socket()
   defp authenticate(socket, session) do
     current_user = socket.view.fetch_subject(socket, session)
+    # TODO: Change to use a key that does not potentially conflict with already
+    # used :current_user assign.
     live_view_assign(socket, :current_user, current_user)
   end
 
@@ -150,6 +152,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     authorization_module = socket.view.authorization_module()
     resource_module = socket.view.resource_module()
     resolver_module = authorization_module.resolver_module()
+    # TODO: Change to use a key that does not potentially conflict with already
+    # used :current_user assign.
     subject = socket.assigns.current_user
 
     case resolver_module.authorized?(
