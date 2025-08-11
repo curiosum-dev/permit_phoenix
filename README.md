@@ -1,34 +1,46 @@
-# Permit.Phoenix
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/f0352656-397d-4d90-999a-d3adbae1095f">
+
+  <h1>Permit.Phoenix</h1>
+  <p><strong>Phoenix Framework and LiveView integration for Permit - Authorization made simple for controllers and live views.
+</strong></p>
+
+  [![Contact Us](https://img.shields.io/badge/Contact%20Us-%23F36D2E?style=for-the-badge&logo=maildotru&logoColor=white&labelColor=F36D2E)](https://curiosum.com/contact)
+  [![Visit Curiosum](https://img.shields.io/badge/Visit%20Curiosum-%236819E6?style=for-the-badge&logo=elixir&logoColor=white&labelColor=6819E6)](https://curiosum.com/services/elixir-software-development)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-1D0642?style=for-the-badge&logo=open-source-initiative&logoColor=white&labelColor=1D0642)]()
+</div>
+
+
+<br/>
+
+## Purpose and usage
+
+Permit.Phoenix provides seamless authorization integration for Phoenix Framework applications, enabling consistent permission checking across controllers and LiveViews without code duplication.
+
+Key features:
+- **Automatic authorization** - Plug-based controllers and LiveViews authorize actions automatically
+- **Resource preloading** - Automatically load and scope single database records and lists based on user permissions
+- **LiveView 1.0+ support** - Optional integration with streams and modern LiveView features
+- **Flexible error handling** - Customizable unauthorized and not-found behaviors
+- **Router integration** - Automatic action mapping from Phoenix routes
+- **Event authorization** - Authorize LiveView events with custom mapping
 
 [![Hex version badge](https://img.shields.io/hexpm/v/permit_phoenix.svg)](https://hex.pm/packages/permit_phoenix)
 [![Actions Status](https://github.com/curiosum-dev/permit_phoenix/actions/workflows/elixir.yml/badge.svg)](https://github.com/curiosum-dev/permit_phoenix/actions)
 [![Code coverage badge](https://img.shields.io/codecov/c/github/curiosum-dev/permit_phoenix/master.svg)](https://codecov.io/gh/curiosum-dev/permit_phoenix/branch/master)
 [![License badge](https://img.shields.io/hexpm/l/permit_phoenix.svg)](https://github.com/curiosum-dev/permit_phoenix/blob/master/LICENSE.md)
 
-[Phoenix Framework](https://hexdocs.pm/phoenix) and [LiveView](https://hexdocs.pm/phoenix_live_view) integration for [Permit](https://hexdocs.pm/permit) authorization library.
+### How it works
 
-## Purpose and usage
-
-`Permit.Phoenix` allows for consistent authorization of actions throughout the entire codebase of a Phoenix application, both in Plug-based controllers and in LiveView.
 - [`Permit`](https://hexdocs.pm/permit) provides the permission definition syntax
 - [`Permit.Ecto`](https://hexdocs.pm/permit_ecto) is optional, but - if present - it constructs queries to look up accessible records from a database, based on defined permissions
 - `Permit.Phoenix` plugs into controllers and live views in order to automatically preload records and check authorization permissions to perform actions.
 
-### Installation
+### Configure & define your permissions
 
-The package can be installed by adding `permit_phoenix` to your list of dependencies in `mix.exs`:
+Requires `:permit` and `:permit_phoenix` packages, with optional `:permit_ecto` for database integration.
 
-```elixir
-def deps do
-  [
-    {:permit_phoenix, "~> 0.3.0"},
-    # :permit_ecto can be omitted if Ecto is not used
-    {:permit_ecto, "~> 0.2.4"}
-  ]
-end
-```
-
-### Configuration
+## Configuration
 
 While in basic Permit all actions must be defined in a module implementing the `Permit.Actions` behaviour, in the `grouping_schema/0` callback implementation, in Phoenix it is potentially inconvenient - adding a new controller action name would require adding it to the `grouping_schema/0` implementation every single time.
 
@@ -72,6 +84,10 @@ end
 ```
 
 The `view/3` and `watch/3` functions are shorthands to `permission_to/4` in which the first argument would've been `:view` or `:watch`, respectively - they're generated based on the module implementing `grouping_schema/0` callback from `Permit.Actions`.
+
+### Quick authorization examples
+
+Basic controller and LiveView integration examples:
 
 ## Default action mapping
 
@@ -419,3 +435,61 @@ defmodule MyAppWeb.ArticleLive.Show do
   end
 end
 ```
+
+## Ecosystem
+
+Permit.Phoenix is part of the modular Permit ecosystem:
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| **[permit](https://hex.pm/packages/permit)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit.svg)](https://hex.pm/packages/permit) | Core authorization library |
+| **[permit_ecto](https://hex.pm/packages/permit_ecto)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_ecto.svg)](https://hex.pm/packages/permit_ecto) | Ecto integration for database queries |
+| **[permit_phoenix](https://hex.pm/packages/permit_phoenix)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_phoenix.svg)](https://hex.pm/packages/permit_phoenix) | Phoenix Controllers & LiveView integration |
+| **[permit_absinthe](https://github.com/curiosum-dev/permit_absinthe)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_absinthe.svg)](https://hex.pm/packages/permit_absinthe) | GraphQL API authorization via Absinthe |
+
+## Installation
+
+The package can be installed by adding `permit_phoenix` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:permit, "~> 0.3.0"},          # Core authorization library
+    {:permit_phoenix, "~> 0.3.0"},  # Phoenix & LiveView integration
+    {:permit_ecto, "~> 0.2.4"}      # Optional: for database integration
+  ]
+end
+```
+
+For GraphQL support, also add `:permit_absinthe`.
+
+## Documentation
+
+- **Permit.Phoenix docs**: [hexdocs.pm/permit_phoenix](https://hexdocs.pm/permit_phoenix)
+- **Core library**: [hexdocs.pm/permit](https://hexdocs.pm/permit)
+- **Ecto integration**: [hexdocs.pm/permit_ecto](https://hexdocs.pm/permit_ecto)
+- **Absinthe integration**: [hexdocs.pm/permit_absinthe](https://hexdocs.pm/permit_absinthe)
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](https://github.com/curiosum-dev/permit_phoenix/blob/master/CONTRIBUTING.md) for details.
+
+### Development setup
+
+Just clone the repository, install dependencies normally, develop and run tests. When running Credo and Dialyzer, please use `MIX_ENV=test` to ensure tests and support files are validated, too.
+
+### Community
+
+- **Slack channel**: [Elixir Slack / #permit](https://elixir-lang.slack.com/archives/C091Q5S0GDU)
+- **Issues**: [GitHub Issues](https://github.com/curiosum-dev/permit_phoenix/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/curiosum-dev/permit/discussions)
+- **Blog**: [Curiosum Blog](https://curiosum.com/blog?search=permit)
+
+## Contact
+
+* Library maintainer: [Michał Buszkiewicz](https://github.com/vincentvanbush)
+* [**Curiosum**](https://curiosum.com) - Elixir development team behind Permit
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
