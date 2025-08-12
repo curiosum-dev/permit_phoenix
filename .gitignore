@@ -32,3 +32,5 @@ permit_ecto-*.tar
 .tool-versions
 
 .vscode/
+
+.envrc

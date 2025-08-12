@@ -33,7 +33,7 @@ defmodule Permit.Phoenix.MixProject do
     [
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/curiosum-dev/permit_phoenix/"},
-      maintainers: ["Michał Buszkiewicz", "Piotr Lisowski"],
+      maintainers: ["Michał Buszkiewicz"],
       files: ["lib", "mix.exs", "README*"]
     ]
   end
