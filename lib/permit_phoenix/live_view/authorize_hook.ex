@@ -91,7 +91,12 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
   Code.ensure_loaded(Phoenix.Component)
 
   defmacro live_view_assign(socket, key, value) do
-    if Mix.Dep.Lock.read()[:phoenix_live_view] do
+    if Mix.Project.config()[:deps]
+       |> Enum.any?(fn
+         {:phoenix_live_view, _} -> true
+         {:phoenix_live_view, _, _} -> true
+         _ -> false
+       end) do
       quote do
         if is_list(unquote(value)) and unquote(socket).view.use_stream?(unquote(socket)) do
           unquote(socket)

@@ -5,6 +5,13 @@ defmodule Permit.Phoenix.Types do
 
   alias Permit.Types
 
+  @permit_ecto_available? Mix.Project.config()[:deps]
+                          |> Enum.any?(fn
+                            {:permit_ecto, _} -> true
+                            {:permit_ecto, _, _} -> true
+                            _ -> false
+                          end)
+
   # Phoenix-specific types
   @type conn :: Plug.Conn.t()
 
@@ -36,7 +43,7 @@ defmodule Permit.Phoenix.Types do
   """
   @type handle_unauthorized :: (Types.action_group(), conn() -> conn())
 
-  if Mix.Dep.Lock.read()[:permit_ecto] do
+  if @permit_ecto_available? do
     @typedoc """
     - `:authorization_module` -- (Required) The app's authorization module that uses `use Permit`.
     - `preload_actions` -- (Optional) The list of actions that resources will be preloaded and authorized in, in addition to :show, :delete, :edit and :update.

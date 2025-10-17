@@ -57,9 +57,9 @@ defmodule Permit.Phoenix.MixProject do
   defp deps do
     [
       {:permit, "~> 0.3"},
-      {:permit_ecto, "~> 0.2", only: :test},
-      {:ecto, "~> 3.0", only: :test},
-      {:ecto_sql, "~> 3.0", only: :test},
+      {:permit_ecto, "~> 0.2", optional: true},
+      {:ecto, "~> 3.0", optional: true},
+      {:ecto_sql, "~> 3.0", optional: true},
       {:postgrex, "~> 0.16", only: :test},
       {:phoenix_live_view, "#{live_view_version()}", optional: true},
       {:phoenix, "#{phoenix_version()}", optional: true},

@@ -67,6 +67,14 @@ defmodule Permit.Phoenix.LiveView do
 
   import Phoenix.LiveView
 
+  # Check project config (works for both hex and path deps)
+  @permit_ecto_available? Mix.Project.config()[:deps]
+                          |> Enum.any?(fn
+                            {:permit_ecto, _} -> true
+                            {:permit_ecto, _, _} -> true
+                            _ -> false
+                          end)
+
   @callback resource_module() :: module()
 
   @doc """
@@ -81,7 +89,7 @@ defmodule Permit.Phoenix.LiveView do
   """
   @callback singular_actions() :: [atom()]
 
-  if Mix.Dep.Lock.read()[:permit_ecto] do
+  if @permit_ecto_available? do
     @callback base_query(Types.resolution_context()) :: Ecto.Query.t()
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
   end
@@ -101,10 +109,10 @@ defmodule Permit.Phoenix.LiveView do
   @callback event_mapping() :: map()
   @callback use_stream?(PhoenixTypes.socket()) :: boolean()
   @optional_callbacks [
-                        if(Mix.Dep.Lock.read()[:permit_ecto],
+                        if(@permit_ecto_available?,
                           do: {:base_query, 1}
                         ),
-                        if(Mix.Dep.Lock.read()[:permit_ecto],
+                        if(@permit_ecto_available?,
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
@@ -125,7 +133,7 @@ defmodule Permit.Phoenix.LiveView do
     quote generated: true do
       import unquote(__MODULE__)
 
-      if Mix.Dep.Lock.read()[:permit_ecto] do
+      if unquote(@permit_ecto_available?) do
         require Ecto.Query
       end
 
@@ -172,7 +180,7 @@ defmodule Permit.Phoenix.LiveView do
       @impl true
       def except, do: unquote(opts[:except]) || []
 
-      if Mix.Dep.Lock.read()[:permit_ecto] do
+      if unquote(@permit_ecto_available?) do
         @impl true
         def base_query(%{
               action: action,
@@ -229,10 +237,10 @@ defmodule Permit.Phoenix.LiveView do
 
       defoverridable(
         [
-          if(Mix.Dep.Lock.read()[:permit_ecto],
+          if(unquote(@permit_ecto_available?),
             do: {:base_query, 1}
           ),
-          if(Mix.Dep.Lock.read()[:permit_ecto],
+          if(unquote(@permit_ecto_available?),
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
@@ -346,7 +354,7 @@ defmodule Permit.Phoenix.LiveView do
     end
   end
 
-  if Mix.Dep.Lock.read()[:permit_ecto] do
+  if @permit_ecto_available? do
     @doc false
 
     def base_query(

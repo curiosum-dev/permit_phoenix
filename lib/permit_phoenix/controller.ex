@@ -49,6 +49,13 @@ defmodule Permit.Phoenix.Controller do
   import Plug.Conn
   import Phoenix.Controller
 
+  @permit_ecto_available? Mix.Project.config()[:deps]
+                          |> Enum.any?(fn
+                            {:permit_ecto, _} -> true
+                            {:permit_ecto, _, _} -> true
+                            _ -> false
+                          end)
+
   @doc ~S"""
   Configures the controller with the application's authorization configuration.
 
@@ -100,7 +107,7 @@ defmodule Permit.Phoenix.Controller do
   """
   @callback resource_module() :: Types.resource_module()
 
-  if Mix.Dep.Lock.read()[:permit_ecto] do
+  if @permit_ecto_available? do
     @doc ~S"""
     Creates the basis for an Ecto query constructed by `Permit.Ecto` based on controller action, resource module, subject (typically `:current_user`) and controller params.
 
@@ -241,10 +248,10 @@ defmodule Permit.Phoenix.Controller do
   @callback unauthorized_message(Types.action_group(), PhoenixTypes.conn()) :: binary()
 
   @optional_callbacks [
-                        if(Mix.Dep.Lock.read()[:permit_ecto],
+                        if(@permit_ecto_available?,
                           do: {:base_query, 1}
                         ),
-                        if(Mix.Dep.Lock.read()[:permit_ecto],
+                        if(@permit_ecto_available?,
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
@@ -306,7 +313,7 @@ defmodule Permit.Phoenix.Controller do
         unquote(__MODULE__).except(unquote(opts))
       end
 
-      if Mix.Dep.Lock.read()[:permit_ecto] do
+      if unquote(@permit_ecto_available?) do
         @impl true
         def base_query(%{
               action: action,
@@ -359,10 +366,10 @@ defmodule Permit.Phoenix.Controller do
 
       defoverridable(
         [
-          if(Mix.Dep.Lock.read()[:permit_ecto],
+          if(unquote(@permit_ecto_available?),
             do: {:base_query, 1}
           ),
-          if(Mix.Dep.Lock.read()[:permit_ecto],
+          if(unquote(@permit_ecto_available?),
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
@@ -474,7 +481,7 @@ defmodule Permit.Phoenix.Controller do
     end
   end
 
-  if Mix.Dep.Lock.read()[:permit_ecto] do
+  if @permit_ecto_available? do
     @doc false
     def base_query(
           %{
