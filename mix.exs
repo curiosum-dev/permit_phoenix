@@ -49,7 +49,7 @@ defmodule Permit.Phoenix.MixProject do
     [
       extra_applications:
         case Mix.env() do
-          :test -> [:logger, :plug, :phoenix_live_view]
+          :test -> [:logger, :ecto_sql, :plug, :phoenix_live_view]
           :dev -> [:logger, :plug, :phoenix_live_view]
           _ -> [:logger]
         end
