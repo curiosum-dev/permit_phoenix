@@ -16,7 +16,13 @@ defmodule Permit.Phoenix.MixProject do
       description:
         "Phoenix, Plug and LiveView integrations for the Permit authorization library.",
       package: package(),
-      dialyzer: [plt_add_apps: [:ex_unit, :permit_ecto]],
+      dialyzer: [
+        plt_add_apps: [:ex_unit, :permit, :phoenix, :phoenix_live_view, :plug],
+        plt_ignore_apps: [:ecto, :ecto_sql, :permit_ecto],
+        ignore_warnings: ".dialyzer_ignore.exs",
+        list_unused_filters: true,
+        flags: [:unmatched_returns, :error_handling]
+      ],
       docs: docs(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
