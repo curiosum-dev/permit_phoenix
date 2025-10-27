@@ -1,0 +1,21 @@
+coverage:
+  status:
+    patch:
+      default:
+        informational: true
+    project:
+      default:
+        informational: true
+
+# Ignore configuration and test files from coverage reports
+ignore:
+  - "mix.exs"
+  - "*.exs"
+  - "test/**/*"
+  - "priv/**/*"
+  - "config/**/*"
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
