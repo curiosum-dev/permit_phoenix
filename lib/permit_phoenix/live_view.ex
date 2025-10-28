@@ -68,12 +68,7 @@ defmodule Permit.Phoenix.LiveView do
   import Phoenix.LiveView
 
   # Check project config (works for both hex and path deps)
-  @permit_ecto_available? Mix.Project.config()[:deps]
-                          |> Enum.any?(fn
-                            {:permit_ecto, _} -> true
-                            {:permit_ecto, _, _} -> true
-                            _ -> false
-                          end)
+  @permit_ecto_available? Permit.Phoenix.Utils.permit_ecto_available?()
 
   @callback resource_module() :: module()
 

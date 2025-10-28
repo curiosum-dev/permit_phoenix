@@ -8,7 +8,7 @@
   ~r/Function handle_not_found\/2 only terminates with explicit exception/,
 
   # Mix.Project.config/0 is called in macros at compile time, not runtime
-  ~r/lib\/permit_phoenix\/live_view\/authorize_hook\.ex.*Function Mix\.Project\.config\/0 does not exist/,
+  ~r/Function Mix\.Project\.config\/0 does not exist/,
 
   # Test support files use optional dependencies (Ecto, Permit.Ecto)
   # that are not in the PLT when running in test mode
