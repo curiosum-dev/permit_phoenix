@@ -5,12 +5,7 @@ defmodule Permit.Phoenix.Types do
 
   alias Permit.Types
 
-  @permit_ecto_available? Mix.Project.config()[:deps]
-                          |> Enum.any?(fn
-                            {:permit_ecto, _} -> true
-                            {:permit_ecto, _, _} -> true
-                            _ -> false
-                          end)
+  @permit_ecto_available? Permit.Phoenix.Utils.permit_ecto_available?()
 
   # Phoenix-specific types
   @type conn :: Plug.Conn.t()

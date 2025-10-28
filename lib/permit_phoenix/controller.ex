@@ -49,12 +49,7 @@ defmodule Permit.Phoenix.Controller do
   import Plug.Conn
   import Phoenix.Controller
 
-  @permit_ecto_available? Mix.Project.config()[:deps]
-                          |> Enum.any?(fn
-                            {:permit_ecto, _} -> true
-                            {:permit_ecto, _, _} -> true
-                            _ -> false
-                          end)
+  @permit_ecto_available? Permit.Phoenix.Utils.permit_ecto_available?()
 
   @doc ~S"""
   Configures the controller with the application's authorization configuration.
