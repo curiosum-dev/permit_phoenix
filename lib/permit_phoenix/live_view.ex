@@ -249,7 +249,8 @@ defmodule Permit.Phoenix.LiveView do
           unauthorized_message: 2,
           action_grouping: 0,
           singular_actions: 0,
-          use_stream?: 1
+          use_stream?: 1,
+          event_mapping: 0
         ]
         |> Enum.filter(& &1)
       )
