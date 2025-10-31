@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Fixed
+- Fix method of checking for Permit.Ecto existence (#34). Now it should be working correctly both when using hex and path dependencies.
+- Add missing `defoverridable event_mapping: 0` to `Permit.Phoenix.LiveView` to allow overriding the `event_mapping` function in child modules.
+
 ## [0.3.0]
 
 ### Added

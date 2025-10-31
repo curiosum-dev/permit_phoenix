@@ -30,6 +30,22 @@ Key features:
 [![Code coverage badge](https://img.shields.io/codecov/c/github/curiosum-dev/permit_phoenix/master.svg)](https://codecov.io/gh/curiosum-dev/permit_phoenix/branch/master)
 [![License badge](https://img.shields.io/hexpm/l/permit_phoenix.svg)](https://github.com/curiosum-dev/permit_phoenix/blob/master/LICENSE.md)
 
+## Installation
+
+The package can be installed by adding `permit_phoenix` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:permit, "~> 0.3.0"},          # Core authorization library
+    {:permit_phoenix, "~> 0.3.1"},  # Phoenix & LiveView integration
+    {:permit_ecto, "~> 0.2.4"}      # Optional: for database integration
+  ]
+end
+```
+
+For GraphQL support, also add `:permit_absinthe`.
+
 ### How it works
 
 - [`Permit`](https://hexdocs.pm/permit) provides the permission definition syntax
@@ -446,22 +462,6 @@ Permit.Phoenix is part of the modular Permit ecosystem:
 | **[permit_ecto](https://hex.pm/packages/permit_ecto)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_ecto.svg)](https://hex.pm/packages/permit_ecto) | Ecto integration for database queries |
 | **[permit_phoenix](https://hex.pm/packages/permit_phoenix)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_phoenix.svg)](https://hex.pm/packages/permit_phoenix) | Phoenix Controllers & LiveView integration |
 | **[permit_absinthe](https://github.com/curiosum-dev/permit_absinthe)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_absinthe.svg)](https://hex.pm/packages/permit_absinthe) | GraphQL API authorization via Absinthe |
-
-## Installation
-
-The package can be installed by adding `permit_phoenix` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:permit, "~> 0.3.0"},          # Core authorization library
-    {:permit_phoenix, "~> 0.3.0"},  # Phoenix & LiveView integration
-    {:permit_ecto, "~> 0.2.4"}      # Optional: for database integration
-  ]
-end
-```
-
-For GraphQL support, also add `:permit_absinthe`.
 
 ## Documentation
 
