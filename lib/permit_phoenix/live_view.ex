@@ -291,6 +291,11 @@ defmodule Permit.Phoenix.LiveView do
     quote generated: true do
       import unquote(__MODULE__)
 
+      Module.register_attribute(__MODULE__, :permit_action, accumulate: true)
+      Module.register_attribute(__MODULE__, :__event_mapping__, [])
+      @__event_mapping__ %{}
+      @on_definition Permit.Phoenix.Decorators.LiveView
+
       if unquote(@permit_ecto_available?) do
         require Ecto.Query
       end
@@ -299,8 +304,9 @@ defmodule Permit.Phoenix.LiveView do
       @before_compile unquote(__MODULE__)
       @opts unquote(opts)
 
-      @impl true
-      def event_mapping, do: unquote(__MODULE__).event_mapping()
+      # event mapping is defined in the __before_compile__ callback to ensure it is
+      # available to the module before the __before_compile__ callback is executed.
+      @before_compile unquote(__MODULE__)
 
       @impl true
       def handle_unauthorized(action, socket) do
@@ -431,7 +437,6 @@ defmodule Permit.Phoenix.LiveView do
           action_grouping: 0,
           singular_actions: 0,
           use_stream?: 1,
-          event_mapping: 0,
           use_scope?: 0,
           scope_subject: 1
         ]
@@ -442,6 +447,22 @@ defmodule Permit.Phoenix.LiveView do
 
   defmacro __before_compile__(_env) do
     quote do
+      if Module.defines?(__MODULE__, {:event_mapping, 0}) do
+        # it appears the developer has defined their own event_mapping/0 function,
+        # so we will disregard the default event mapping, and only merge the developer's
+        # implementation with whatever was defined using @permit_action module attributes.
+        defoverridable event_mapping: 0
+        def event_mapping, do: super() |> Map.merge(@__event_mapping__)
+      else
+        # no event_mapping/0 function defined, so we use the default event mapping + whatever
+        # was defined in the module using @permit_action.
+        @impl true
+        def event_mapping,
+          do: unquote(__MODULE__).default_event_mapping() |> Map.merge(@__event_mapping__)
+
+        defoverridable event_mapping: 0
+      end
+
       if Module.defines?(__MODULE__, {:loader, 1}) do
         def use_loader?, do: true
       else
@@ -482,8 +503,22 @@ defmodule Permit.Phoenix.LiveView do
     RuntimeError -> false
   end
 
-  @doc false
-  def event_mapping do
+  # Default event mapping will not map "save" to any action. It is not unambiguous
+  # whether "save" should be mapped to :create or :update. Since Phoenix generators use "save"
+  # for both create and update actions, it will be up to the developer to clarify the mapping using:
+  #
+  # ```elixir
+  # @permit_action :create
+  # def handle_event("save", params, socket) do
+  #   {:noreply, socket}
+  # end
+  #
+  # @permit_action :update
+  # def handle_event("save", params, socket) do
+  #   {:noreply, socket}
+  # end
+  # ```
+  def default_event_mapping do
     %{
       "create" => :create,
       "delete" => :delete,
