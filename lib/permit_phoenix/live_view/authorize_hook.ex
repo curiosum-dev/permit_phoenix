@@ -135,8 +135,26 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
   @spec authenticate(PhoenixTypes.socket(), map()) :: PhoenixTypes.socket()
   defp authenticate(socket, session) do
-    current_user = socket.view.fetch_subject(socket, session)
-    live_view_assign(socket, :current_user, current_user)
+    if socket.view.use_scope?() do
+      socket
+      |> assign_subject(session, :current_scope)
+    else
+      socket
+      |> assign_subject(session, :current_user)
+    end
+  end
+
+  @spec assign_subject(PhoenixTypes.socket(), map(), atom()) :: PhoenixTypes.socket()
+  defp assign_subject(socket, session, assign_key \\ :current_user) do
+    subject =
+      if function_exported?(socket.view, :fetch_subject, 2) do
+        socket.view.fetch_subject(socket, session)
+      else
+        socket.assigns[assign_key]
+      end
+
+    socket
+    |> live_view_assign(assign_key, subject)
   end
 
   @spec authorize(PhoenixTypes.socket(), Types.action_group(), map()) ::
@@ -155,7 +173,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     authorization_module = socket.view.authorization_module()
     resource_module = socket.view.resource_module()
     resolver_module = authorization_module.resolver_module()
-    subject = socket.assigns.current_user
+    assign_key = if socket.view.use_scope?(), do: :current_scope, else: :current_user
+    subject = socket.assigns[assign_key]
 
     case resolver_module.authorized?(
            subject,
@@ -180,7 +199,8 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
     base_query = &socket.view.base_query/1
     loader = &socket.view.loader/1
     finalize_query = &socket.view.finalize_query/2
-    subject = socket.assigns.current_user
+    assign_key = if socket.view.use_scope?(), do: :current_scope, else: :current_user
+    subject = socket.assigns[assign_key]
     singular? = action in socket.view.singular_actions()
 
     {load_key, other_key, auth_function} =

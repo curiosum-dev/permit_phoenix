@@ -56,7 +56,17 @@ defmodule Permit.Phoenix.LiveView do
         end
       end
 
-  Optionally, p handle_unauthorized/2 optional callback can be implemented, returning {:cont, socket}
+      # Enable Phoenix Scopes integration (optional):
+
+      @impl true
+      def use_scope?, do: true
+
+  When `use_scope?/0` returns `true`, the LiveView will use `:current_scope` instead of
+  `:current_user` for the subject assign. This allows integration with Phoenix's built-in
+  scope system for multi-tenant applications or when additional context beyond the user
+  is needed. See the README for more details on using Phoenix Scopes with Permit.
+
+  Optionally, a handle_unauthorized/2 optional callback can be implemented, returning {:cont, socket}
   or {:halt, socket}. The default implementation returns:
 
       {:halt, socket(socket, to: socket.view.fallback_path())}
@@ -103,6 +113,7 @@ defmodule Permit.Phoenix.LiveView do
   @callback unauthorized_message(PhoenixTypes.socket(), map()) :: binary()
   @callback event_mapping() :: map()
   @callback use_stream?(PhoenixTypes.socket()) :: boolean()
+  @callback use_scope?() :: boolean()
   @optional_callbacks [
                         if(@permit_ecto_available?,
                           do: {:base_query, 1}
@@ -115,12 +126,14 @@ defmodule Permit.Phoenix.LiveView do
                         fallback_path: 2,
                         resource_module: 0,
                         except: 0,
+                        fetch_subject: 2,
                         loader: 1,
                         id_param_name: 2,
                         id_struct_field_name: 2,
                         handle_not_found: 1,
                         unauthorized_message: 2,
-                        use_stream?: 1
+                        use_stream?: 1,
+                        use_scope?: 0
                       ]
                       |> Enum.filter(& &1)
 
@@ -219,6 +232,14 @@ defmodule Permit.Phoenix.LiveView do
         end
       end
 
+      @impl true
+      def use_scope? do
+        case unquote(opts[:use_scope?]) do
+          fun when is_function(fun) -> fun.() || false
+          other -> other || false
+        end
+      end
+
       # Default implementations
       @impl true
       def action_grouping do
@@ -250,7 +271,8 @@ defmodule Permit.Phoenix.LiveView do
           action_grouping: 0,
           singular_actions: 0,
           use_stream?: 1,
-          event_mapping: 0
+          event_mapping: 0,
+          use_scope?: 0
         ]
         |> Enum.filter(& &1)
       )
