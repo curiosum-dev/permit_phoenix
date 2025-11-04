@@ -1,65 +1,174 @@
 defmodule Permit.Phoenix.LiveView do
   @moduledoc """
-  A live view module using the authorization mechanism should mix in the LiveViewAuthorization
-  module:
+  Using this module, Permit authorization can be integrated with Phoenix LiveView at three key points:
+  1. During mount (via the `on_mount: Permit.Phoenix.LiveView.AuthorizeHook` hook)
+  2. During live navigation (via the `handle_params/3` callback)
+  3. During events (via the `handle_event/3` callback)
 
-      defmodule MyAppWeb.DocumentLive.Index
-        use Permit.Phoenix.LiveView
+  This way, Permit.Phoenix's load-and-authorize mechanism occurs regardless of whether the user has
+  navigated to the page directly (from outside a LiveView session), or has navigated to a URL that stays
+  within the same LiveView session (or the same LiveView instance), and also when an event is triggered
+  (e.g. a `delete` button is clicked).
 
-        @impl true
-        def resource_module, do: Document
+  ## Setup
 
-        # Override default action groupings if needed
-        @impl true
-        def action_grouping do
-          %{
-            new: [:create],
-            index: [:read],
-            show: [:read],
-            edit: [:update],
-            create: [:create],
-            update: [:update],
-            delete: [:delete]
-          }
-        end
+  In the router, in a `live_session` that authenticates the user, add `Permit.Phoenix.LiveView.AuthorizeHook`
+  after the `:ensure_authenticated` hook at `:on_mount`:
 
-        # Override singular actions if needed
-        @impl true
-        def singular_actions do
-          [:show, :edit, :new, :delete, :update]
+      live_session :require_authenticated_user,
+        on_mount: [{MyAppWeb.UserAuth, :ensure_authenticated}, Permit.Phoenix.LiveView.AuthorizeHook] do
+        live "/live_articles", ArticleLive.Index, :index
+        live "/live_articles/new", ArticleLive.Index, :new
+        live "/live_articles/:id/edit", ArticleLive.Index, :edit
+
+        live "/live_articles/:id", ArticleLive.Show, :show
+        live "/live_articles/:id/show/edit", ArticleLive.Show, :edit
+      end
+
+  Permit uses action modules to define action names that can be authorized. For convenience, you can
+  pull the action names from your router - your `live_action` names will be used by Permit.
+
+      defmodule MyApp.Actions do
+        # Merge the actions from the router into the default grouping schema.
+        use Permit.Phoenix.Actions, router: MyAppWeb.Router
+      end
+
+  Note that standard Phoenix action names like `:index`, `:show`, `:edit`, `:new`, `:delete`,
+  `:update` are already included and configured to be plural or singular accordingly.
+  For other action names from your router, you'll need to define their _arity_ in the action module
+  using the `singular_actions/0` callback.
+
+  Then, configure LiveViews to use the authorization mechanism. It can be put in individual modules,
+  or in the `MyAppWeb` module's `live_view` function:
+
+      defmodule MyAppWeb do
+        def live_view do
+          quote do
+            use Permit.Phoenix.LiveView,
+              authorization_module: MyApp.Authorization,
+          end
         end
       end
 
-  which adds the LiveViewAuthorization behavior with the following callbacks to be implemented -
-  for example:
+  Options can be set as `use` keywords, or as callback implementations (which take precedence). This way, you can override them
+  in individual LiveViews. Typically, at the very least, you'll want to set the `resource_module`
+  to the related schema.
 
-      # The related schema
+      defmodule MyAppWeb.ArticleLive.Index do
+        use MyAppWeb, :live_view
+
+        @impl true
+        def resource_module, do: MyApp.Article
+      end
+
+  ## Navigation & mounting authorization
+
+  Navigating to a LiveView route results in triggering the `handle_params/3` callback. This may occur
+  in three scenarios:
+  * navigating from outside a LiveView session (e.g. from a link in an email or a browser bookmark),
+  * navigating within the same LiveView session, but a different LiveView instance,
+  * navigating within the same LiveView instance.
+
+  Permit's hook taps into the `handle_params/3` callback processing to **load and authorize**:
+  * take the `live_action` from the socket, and use it to determine the action to authorize,
+  * for a plural action (e.g. `:index`), authorize load all resources with Permit.Ecto based on `resource_module`
+    * if Permit.Ecto is not present, use the `loader` function to load the resources,
+  * for a singular action (e.g. `:edit`), load the resource with Permit.Ecto based on `resource_module` and `id_param_name`/`id_struct_field_name`
+    options (defaulting to `:id` for the latter), and authorize it,
+    * if Permit.Ecto is not present, use the `loader` function likewise,
+
+  Example of a singular action:
 
       @impl true
-      def resource_module, do: Document
+      def handle_params(_params, _uri, socket) do
+        # Article is loaded and authorized by Permit
+        article = socket.assigns.loaded_resource
 
-      # Loader function for a singular resource in appropriate actions (:show, etc.); usually a context
-      # function. If not defined, Repo.get is used by default.
+        {:noreply, socket |> assign(:title, article.title)}
+      end
+
+  If an action is defined as plural in the actions module, resources are either assigned to `:loaded_resources`
+  (by default), or streamed as `:loaded_resources` if `use_stream?/1` is `true`.
+
+      # Default: assign to `:loaded_resources`
+      @impl true
+      def handle_params(_params, _uri, socket) do
+        # Article list is loaded
+        articles =
+      end
+
+      # Optional: set `use_stream?/1` to `true` to use streams instead of assigns
+      @impl true
+      def use_stream?(_socket), do: true
 
       @impl true
-      def loader, do: fn id -> get_organization!(id) end
+      def handle_params(_params, _uri, socket) do
+        # Article list available in @streams.loaded_resources
+        {:noreply, socket}
+      end
 
-      # How to fetch the current user from session - for instance:
+  ### Notes on mounting and handling authorization failure
+
+  An important note is that, in the first two scenarios, the new LiveView has to be mounted, whereas
+  in the third one, it is already mounted. It is of significance to implementing `handle_unauthorized/2`
+  correctly, because if the LiveView is in the mounting phase, a redirect navigation is required, whereas
+  if it is already mounted, any way of handling the event is acceptable.
+
+  For convenience, this module provides the `mounting?/1` function, which returns `true` if the
+  LiveView is in the mounting phase, and `false` otherwise. It can be used in the `handle_unauthorized/2`
+  callback implementation to determine the appropriate response in a custom way.
 
       @impl true
-      def fetch_subject(socket, session) do
-        with token when not is_nil(token) <- session["token"],
-             %User{} = current_user <- get_user(token) do
-          current_user
+      def handle_unauthorized(action, socket) do
+        if mounting?(socket) do
+          {:halt, push_navigate(socket, to: socket.view.fallback_path())}
         else
-          _ -> nil
+          # Do whatever you want with the socket here...
+          socket = assign(socket, :unauthorized, true)
+
+          # Use :cont to continue processing the module's handle_params/3 handlers,
+          # or :halt to halt the processing.
+          {:halt, socket |> put_flash(:error, "You are not authorized to access this page")}
         end
       end
 
-  Optionally, p handle_unauthorized/2 optional callback can be implemented, returning {:cont, socket}
-  or {:halt, socket}. The default implementation returns:
+  See documentation for `handle_unauthorized/2` for more guidance and explanation of default behaviour.
 
-      {:halt, socket(socket, to: socket.view.fallback_path())}
+  ## Event authorization
+
+  Actions such as updating or deleting a resource are typically implemented in LiveView using `handle_event/3`.
+  Permit taps into `handle_event/3` processing, loads the resource with Permit.Ecto (or a loader function) based
+  on the event's `"id"` param and a query based on the currently resolved permissions and puts it in `assigns`.
+  If authorization fails, `handle_unauthorized/2` is called.
+
+  Event to action mapping must be given in the `event_mapping/0` callback. There is no default mapping as
+  event names typically suggested by Phoenix may map to different actions (e.g. Phoenix generates `"save"`
+  for both `:create` and `:update` actions).
+
+      @impl true
+      # "delete" event maps to :delete Permit action
+      def event_mapping, do: %{"delete" => :delete}
+
+      @impl true
+      def handle_event("delete", _params, _socket) do
+        # Resource is loaded and authorized by Permit
+        article = socket.assigns.loaded_resource
+
+        # Delete the record
+        {:ok, _} = MyApp.Blog.delete_article(article)
+
+        # If in an action like :index, stream the deletion to the client.
+        # Permit either streams the viewed items or assigns them (see `use_stream?/1` callback)
+        {:noreply, stream_delete(socket, :loaded_resources, article)}
+      end
+
+      @impl true
+      def handle_unauthorized(:delete, socket) do
+        # You actually don't need to implement it, but it's useful for defining custom behaviour.
+        {:halt, socket |> put_flash(:error, "You are not authorized to delete this article")}
+      end
+
+  The full list of options can be found in this module's callback specifications.
   """
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.Types
@@ -103,6 +212,32 @@ defmodule Permit.Phoenix.LiveView do
   @callback unauthorized_message(PhoenixTypes.socket(), map()) :: binary()
   @callback event_mapping() :: map()
   @callback use_stream?(PhoenixTypes.socket()) :: boolean()
+  @doc ~S"""
+  Determines whether to use Phoenix Scopes for fetching the subject. Set to `false` in Phoenix <1.8.
+
+  If `true`, the subject will be fetched from `current_scope.user`. If `false`, the subject will be fetched from `current_user` assign.
+
+  Defaults to `true`.
+  """
+  @callback use_scope?() :: boolean()
+
+  @doc ~S"""
+  Maps the current Phoenix scope to the subject, if Phoenix Scopes are used (see the `use_scope?/0` callback). Defaults to `scope.user`.
+
+  Defaults to `:user`.
+
+  ## Example
+
+      @impl true
+      def scope_subject(scope) do
+        # Use the entire scope as the subject
+        scope
+
+        # Use a specific key in the scope
+        scope.user
+      end
+  """
+  @callback scope_subject(map()) :: PhoenixTypes.scope_subject()
   @optional_callbacks [
                         if(@permit_ecto_available?,
                           do: {:base_query, 1}
@@ -115,12 +250,15 @@ defmodule Permit.Phoenix.LiveView do
                         fallback_path: 2,
                         resource_module: 0,
                         except: 0,
+                        fetch_subject: 2,
                         loader: 1,
                         id_param_name: 2,
                         id_struct_field_name: 2,
                         handle_not_found: 1,
                         unauthorized_message: 2,
-                        use_stream?: 1
+                        use_stream?: 1,
+                        use_scope?: 0,
+                        scope_subject: 1
                       ]
                       |> Enum.filter(& &1)
 
@@ -219,6 +357,24 @@ defmodule Permit.Phoenix.LiveView do
         end
       end
 
+      @impl true
+      def use_scope? do
+        case unquote(opts[:use_scope?]) do
+          fun when is_function(fun) -> fun.()
+          nil -> true
+          other -> other
+        end
+      end
+
+      @impl true
+      def scope_subject(scope) when is_map(scope) do
+        case unquote(opts[:scope_subject]) do
+          fun when is_function(fun) -> fun.(scope)
+          nil -> scope.user
+          key -> scope |> Map.fetch!(key)
+        end
+      end
+
       # Default implementations
       @impl true
       def action_grouping do
@@ -250,7 +406,9 @@ defmodule Permit.Phoenix.LiveView do
           action_grouping: 0,
           singular_actions: 0,
           use_stream?: 1,
-          event_mapping: 0
+          event_mapping: 0,
+          use_scope?: 0,
+          scope_subject: 1
         ]
         |> Enum.filter(& &1)
       )
@@ -281,13 +439,13 @@ defmodule Permit.Phoenix.LiveView do
   ## Example
 
       @impl true
-          def handle_unauthorized(socket) do
-            if mounting?(socket) do
-              {:halt, push_redirect(socket, to: "/foo")}
-            else
-              {:halt, assign(socket, :unauthorized, true)}
-            end
-          end
+      def handle_unauthorized(socket) do
+        if mounting?(socket) do
+          {:halt, push_redirect(socket, to: "/foo")}
+        else
+          {:halt, assign(socket, :unauthorized, true)}
+        end
+      end
   """
   @spec mounting?(PhoenixTypes.socket()) :: boolean()
   def mounting?(socket) do

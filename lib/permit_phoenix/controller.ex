@@ -242,6 +242,33 @@ defmodule Permit.Phoenix.Controller do
 
   @callback unauthorized_message(Types.action_group(), PhoenixTypes.conn()) :: binary()
 
+  @doc ~S"""
+  Determines whether to use Phoenix Scopes for fetching the subject. Set to `false` in Phoenix <1.8.
+
+  If `true`, the subject will be fetched from `current_scope.user` assign. If `false`, the subject will be fetched from `current_user` assign.
+
+  Defaults to `true`.
+  """
+  @callback use_scope?() :: boolean()
+
+  @doc ~S"""
+  Maps the current Phoenix scope to the subject, if Phoenix Scopes are used (see the `use_scope?/0` callback). Defaults to `scope.user`.
+
+  Defaults to `:user`.
+
+  ## Example
+
+      @impl true
+      def scope_subject(scope) do
+        # Use the entire scope as the subject
+        scope
+
+        # Use a specific key in the scope
+        scope.user
+      end
+  """
+  @callback scope_subject(map()) :: PhoenixTypes.scope_subject()
+
   @optional_callbacks [
                         if(@permit_ecto_available?,
                           do: {:base_query, 1}
@@ -257,7 +284,9 @@ defmodule Permit.Phoenix.Controller do
                         fetch_subject: 1,
                         loader: 1,
                         handle_not_found: 1,
-                        unauthorized_message: 2
+                        unauthorized_message: 2,
+                        use_scope?: 0,
+                        scope_subject: 1
                       ]
                       |> Enum.filter(& &1)
 
@@ -357,6 +386,16 @@ defmodule Permit.Phoenix.Controller do
       @impl true
       def singular_actions do
         unquote(opts)[:authorization_module].permissions_module().actions_module().singular_actions()
+      end
+
+      @impl true
+      def use_scope? do
+        unquote(__MODULE__).use_scope?(unquote(opts))
+      end
+
+      @impl true
+      def scope_subject(scope) do
+        unquote(__MODULE__).scope_subject(scope, unquote(opts))
       end
 
       defoverridable(
@@ -535,13 +574,31 @@ defmodule Permit.Phoenix.Controller do
   end
 
   @doc false
+  def use_scope?(opts) do
+    case opts[:use_scope?] do
+      fun when is_function(fun) -> fun.() || true
+      nil -> true
+      other -> other
+    end
+  end
+
+  @doc false
+  def scope_subject(scope, opts) do
+    case opts[:scope_subject] do
+      fun when is_function(fun) -> fun.(scope)
+      nil -> scope.user
+      key -> scope |> Map.fetch!(key)
+    end
+  end
+
+  @doc false
   def fetch_subject(conn, opts) do
     fetch_subject_fn = opts[:fetch_subject_fn]
 
-    if is_function(fetch_subject_fn, 1) do
-      fetch_subject_fn.(conn)
-    else
-      conn.assigns[:current_user]
+    cond do
+      is_function(fetch_subject_fn, 1) -> fetch_subject_fn.(conn)
+      use_scope?(opts) -> scope_subject(conn.assigns[:current_scope], opts)
+      true -> conn.assigns[:current_user]
     end
   end
 end

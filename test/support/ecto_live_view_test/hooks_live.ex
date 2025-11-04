@@ -1,7 +1,7 @@
 defmodule Permit.EctoLiveViewTest.HooksLive do
   use Phoenix.LiveView, namespace: Permit
 
-  alias Permit.EctoFakeApp.{Authorization, Item, User}
+  alias Permit.EctoFakeApp.{Authorization, Item}
   alias Permit.EctoFakeApp.Item.Context
 
   use Permit.Phoenix.LiveView,
@@ -28,14 +28,6 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
 
   @impl Permit.Phoenix.LiveView
   def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}
-
-  @impl Permit.Phoenix.LiveView
-  def fetch_subject(_socket, session) do
-    case session["token"] do
-      "valid_token" -> %User{id: 1, roles: session["roles"] || []}
-      _ -> nil
-    end
-  end
 
   @impl true
   @spec render(any) :: Phoenix.LiveView.Rendered.t()

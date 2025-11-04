@@ -3,6 +3,7 @@ defmodule Permit.EctoFakeApp.SessionController do
   use Phoenix.Controller
 
   alias Permit.EctoFakeApp.User
+  alias Permit.EctoFakeApp.Scope
 
   def create(conn, params) do
     user =
@@ -11,7 +12,7 @@ defmodule Permit.EctoFakeApp.SessionController do
       |> Map.new()
       |> Map.put(:__struct__, User)
 
-    assign(conn, :current_user, user)
+    assign(conn, :current_scope, Scope.for_user(user))
   end
 
   defp parse_param({k, list}) when is_list(list),
