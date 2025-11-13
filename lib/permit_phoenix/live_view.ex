@@ -236,7 +236,8 @@ defmodule Permit.Phoenix.LiveView do
       def use_scope? do
         case unquote(opts[:use_scope?]) do
           fun when is_function(fun) -> fun.() || true
-          other -> other || true
+          nil -> true
+          other -> other
         end
       end
 

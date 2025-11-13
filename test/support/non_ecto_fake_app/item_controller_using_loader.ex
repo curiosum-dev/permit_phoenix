@@ -6,7 +6,8 @@ defmodule Permit.NonEctoFakeApp.ItemControllerUsingLoader do
 
   use Permit.Phoenix.Controller,
     authorization_module: Authorization,
-    resource_module: Item
+    resource_module: Item,
+    use_scope?: false
 
   def index(conn, _params), do: text(conn, "listing all items")
   def show(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))

@@ -242,6 +242,8 @@ defmodule Permit.Phoenix.Controller do
 
   @callback unauthorized_message(Types.action_group(), PhoenixTypes.conn()) :: binary()
 
+  @callback use_scope?() :: boolean()
+
   @optional_callbacks [
                         if(@permit_ecto_available?,
                           do: {:base_query, 1}
@@ -257,7 +259,8 @@ defmodule Permit.Phoenix.Controller do
                         fetch_subject: 1,
                         loader: 1,
                         handle_not_found: 1,
-                        unauthorized_message: 2
+                        unauthorized_message: 2,
+                        use_scope?: 0
                       ]
                       |> Enum.filter(& &1)
 
@@ -357,6 +360,11 @@ defmodule Permit.Phoenix.Controller do
       @impl true
       def singular_actions do
         unquote(opts)[:authorization_module].permissions_module().actions_module().singular_actions()
+      end
+
+      @impl true
+      def use_scope? do
+        unquote(__MODULE__).use_scope?(unquote(opts))
       end
 
       defoverridable(
@@ -535,13 +543,22 @@ defmodule Permit.Phoenix.Controller do
   end
 
   @doc false
+  def use_scope?(opts) do
+    case opts[:use_scope?] do
+      fun when is_function(fun) -> fun.() || true
+      nil -> true
+      other -> other
+    end
+  end
+
+  @doc false
   def fetch_subject(conn, opts) do
     fetch_subject_fn = opts[:fetch_subject_fn]
 
-    if is_function(fetch_subject_fn, 1) do
-      fetch_subject_fn.(conn)
-    else
-      conn.assigns[:current_user]
+    cond do
+      is_function(fetch_subject_fn, 1) -> fetch_subject_fn.(conn)
+      use_scope?(opts) -> conn.assigns[:current_scope].user
+      true -> conn.assigns[:current_user]
     end
   end
 end
