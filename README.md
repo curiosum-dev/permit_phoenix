@@ -358,10 +358,13 @@ defmodule MyAppWeb.ArticleLive.Index do
     authorization_module: MyApp.Authorization,
     resource_module: MyApp.Article
 
-  # Enable scope-based authorization
+  # For Phoenix projects bootstrapped below 1.8, disable scope-based authorization
+  # (will take current user from the :current_user assign)
   @impl true
-  def use_scope?, do: true
+  def use_scope?, do: false
 
+  # Optional - if you need to fetch the subject differently than by default (from
+  # the :current_scope assign or the current_user assign)
   @impl true
   def fetch_subject(_socket, session) do
     # Fetch and return the current scope

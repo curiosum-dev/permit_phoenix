@@ -6,7 +6,7 @@ defmodule Permit.EctoLiveViewTest do
   import Phoenix.LiveViewTest
 
   alias Permit.EctoLiveViewTest.{Endpoint, HooksLive}
-  alias Permit.EctoFakeApp.{Item, Repo, User}
+  alias Permit.EctoFakeApp.{Item, Repo}
 
   @not_found_message ~r/Expected at least one result but got none/
 
@@ -29,14 +29,6 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized not in Map.keys(assigns)
-    end
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
     end
 
     test "can do :index on items", %{conn: conn} do
@@ -84,14 +76,6 @@ defmodule Permit.EctoLiveViewTest do
 
   describe "owner" do
     setup [:owner_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
@@ -183,14 +167,6 @@ defmodule Permit.EctoLiveViewTest do
       assigns = get_assigns(lv)
 
       assert :unauthorized in Map.keys(assigns)
-    end
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
     end
 
     test "can do :index on items", %{conn: conn} do
