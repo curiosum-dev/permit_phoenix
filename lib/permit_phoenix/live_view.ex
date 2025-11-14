@@ -196,6 +196,31 @@ defmodule Permit.Phoenix.LiveView do
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
   end
 
+  @doc ~S"""
+  Called when authorization fails either in `handle_event` or `handle_params` (both during
+  mounting and navigation). `{:cont, ...}` or `{:halt, ...}` can be used to either continue
+  executing the normal handlers or halt.
+
+  Defaults to halting, displaying a flash and staying on the same page if possible, either
+  via not navigating at all or by navigating to `_live_referer` - otherwise (e.g. when entering
+  a page from outside a LiveView session) redirects to `:fallback_path`, defaulting to `/`.
+
+  ## Example
+
+      # Default implementation
+      @impl true
+      def handle_unauthorized(action, socket) do
+        # navigate_if_mounting/2 calls push_navigate/2 if Permit.Phoenix.LiveView.mounting?/1 returns true
+        {:halt,
+         socket
+         |> put_flash(:error, socket.view.unauthorized_message(action, socket))
+         |> navigate_if_mounting(to: socket.view.fallback_path(action, socket))}
+      end
+
+      defp navigate_if_mounting(socket, opts) do
+        if mounting?(socket), do: navigate(socket, arg), else: socket
+      end
+  """
   @callback handle_unauthorized(Types.action_group(), PhoenixTypes.socket()) ::
               PhoenixTypes.hook_outcome()
   @callback fetch_subject(PhoenixTypes.socket(), map()) :: Types.subject()

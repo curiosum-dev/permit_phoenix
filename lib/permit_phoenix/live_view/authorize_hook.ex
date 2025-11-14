@@ -169,17 +169,18 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         ) ::
           PhoenixTypes.live_authorization_result()
   defp preload_and_authorize(socket, session, action, params) do
-    use_loader? = socket.view.use_loader?()
+    view = socket.view
+    use_loader? = view.use_loader?()
 
-    authorization_module = socket.view.authorization_module()
+    authorization_module = view.authorization_module()
     resolver_module = authorization_module.resolver_module()
-    resource_module = socket.view.resource_module()
+    resource_module = view.resource_module()
 
-    base_query = &socket.view.base_query/1
-    loader = &socket.view.loader/1
-    finalize_query = &socket.view.finalize_query/2
+    base_query = &view.base_query/1
+    loader = &view.loader/1
+    finalize_query = &view.finalize_query/2
     subject = get_subject(socket, session)
-    singular? = action in socket.view.singular_actions()
+    singular? = action in view.singular_actions()
 
     {load_key, other_key, auth_function} =
       if singular? do

@@ -201,9 +201,12 @@ defmodule Permit.Phoenix.Plug do
   defp authorize_and_preload_fn(number, authorization_module)
 
   defp authorize_and_preload_fn(:one, authorization_module) do
-    &authorization_module.resolver_module().authorize_and_preload_one!/5
+    module = authorization_module.resolver_module()
+    &module.authorize_and_preload_one!/5
   end
 
-  defp authorize_and_preload_fn(:all, authorization_module),
-    do: &authorization_module.resolver_module().authorize_and_preload_all!/5
+  defp authorize_and_preload_fn(:all, authorization_module) do
+    module = authorization_module.resolver_module()
+    &module.authorize_and_preload_all!/5
+  end
 end

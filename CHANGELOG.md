@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - [Breaking] Permit.Phoenix.LiveView no longer needs to have the `fetch_subject/2` callback implemented, and its result is no longer assigned to the `:current_user` assign - so that Permit no longer interferes with your assigns. This was a leftover from before `mix phx.gen.auth` became the de facto standard.
+- [Breaking] Change default behaviour of `handle_unauthorized/2` in LiveView (#39)
+
+  Prior to this version, by default, authorization errors in LiveView would always lead to a flash being displayed and a `push_navigate` to the configured `:fallback_path` (`/` by default). This wasn't practical as it worked this way regardless of whether authorization failed in mounting, navigation (`handle_params`) or event processing (`handle_event`), which meant that almost any practical usage required writing a custom `handle_unauthorized` handler.
+
+  This is now changed:
+  - `put_flash(:error, socket.view.unauthorized_message(action, socket)` is always done,
+  - `push_navigate(socket, to: socket.view.fallback_path(action, socket))` is done if the LiveView is in the mounting phase,
+  - `fallback_path` defaults to the current `_live_referer` path if available, otherwise it is `/`. This means that if using the [link](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#link/1) component with `:navigate` option within the current session, we will still be able to navigate back to the currently displayed page, even though it will go through the mounting phase.
 
 ## [0.3.1]
 
