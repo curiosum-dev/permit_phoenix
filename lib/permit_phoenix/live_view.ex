@@ -475,7 +475,7 @@ defmodule Permit.Phoenix.LiveView do
         {:halt,
          socket
          |> put_flash(:error, socket.view.unauthorized_message(action, socket))
-         |> navigate(to: socket.view.fallback_path(action, socket))}
+         |> navigate_if_mounting(to: socket.view.fallback_path(action, socket))}
 
       fun when is_function(fun) ->
         fun.(action, socket)
@@ -500,9 +500,27 @@ defmodule Permit.Phoenix.LiveView do
   @doc false
   def fallback_path(action, socket, opts) do
     case opts[:fallback_path] do
-      nil -> "/"
-      fun when is_function(fun) -> fun.(action, socket)
-      path -> path
+      nil ->
+        try do
+          referer_url = get_connect_params(socket)["_live_referer"]
+
+          if referer_url,
+            do:
+              URI.parse(referer_url)
+              |> then(fn
+                %{path: path, query: nil} -> path
+                %{path: path, query: query} -> "#{path}?#{query}"
+              end),
+            else: "/"
+        rescue
+          RuntimeError -> "/"
+        end
+
+      fun when is_function(fun) ->
+        fun.(action, socket)
+
+      path ->
+        path
     end
   end
 
@@ -565,6 +583,10 @@ defmodule Permit.Phoenix.LiveView do
       struct_field_name_fn when is_function(struct_field_name_fn) ->
         struct_field_name_fn.(action, socket)
     end
+  end
+
+  defp navigate_if_mounting(socket, arg) do
+    if mounting?(socket), do: navigate(socket, arg), else: socket
   end
 
   defp navigate(socket, arg) do
