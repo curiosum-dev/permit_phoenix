@@ -6,7 +6,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
   import Phoenix.LiveViewTest
 
   alias Permit.EctoLiveViewTest.{Endpoint, HooksWithLoaderLive}
-  alias Permit.EctoFakeApp.{Item, Repo, User}
+  alias Permit.EctoFakeApp.{Item, Repo}
 
   @endpoint Endpoint
 
@@ -18,14 +18,6 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
 
   describe "admin" do
     setup [:admin_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/books")
@@ -74,14 +66,6 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
 
   describe "owner" do
     setup [:owner_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/books")
@@ -142,14 +126,6 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
 
   describe "inspector" do
     setup [:inspector_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/books")

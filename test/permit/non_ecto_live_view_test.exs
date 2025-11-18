@@ -5,7 +5,7 @@ defmodule Permit.NonEctoLiveViewTest do
   import Phoenix.LiveViewTest
 
   alias Permit.NonEctoLiveViewTest.{Endpoint, HooksLive}
-  alias Permit.NonEctoFakeApp.{Item, User}
+  alias Permit.NonEctoFakeApp.Item
   alias Permit.NonEctoFakeApp.Item.Context, as: ItemContext
   alias Permit.NonEctoFakeApp.User.Context, as: UserContext
 
@@ -20,14 +20,6 @@ defmodule Permit.NonEctoLiveViewTest do
 
   describe "admin" do
     setup [:admin_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
@@ -68,14 +60,6 @@ defmodule Permit.NonEctoLiveViewTest do
 
   describe "owner" do
     setup [:owner_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")
@@ -148,14 +132,6 @@ defmodule Permit.NonEctoLiveViewTest do
 
   describe "inspector" do
     setup [:inspector_role, :init_session]
-
-    test "sets :current_user assign", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
-
-      assigns = get_assigns(lv)
-
-      assert %{current_user: %User{id: 1}} = assigns
-    end
 
     test "can do :index on items", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/items")

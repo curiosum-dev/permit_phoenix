@@ -12,6 +12,7 @@ defmodule Permit.Phoenix.Types do
 
   # Phoenix LiveView-specific types
   @type socket :: Phoenix.LiveView.Socket.t()
+  @type session :: map()
   @type hook_outcome :: {:halt, socket()} | {:cont, socket()} | no_return()
   @type live_authorization_result :: {:authorized | :unauthorized | :not_found, socket()}
 
@@ -38,6 +39,11 @@ defmodule Permit.Phoenix.Types do
   """
   @type handle_unauthorized :: (Types.action_group(), conn() -> conn())
 
+  @typedoc """
+  Maps the current Phoenix scope to the subject.
+  """
+  @type scope_subject :: (map() -> Types.subject()) | atom()
+
   if @permit_ecto_available? do
     @typedoc """
     - `:authorization_module` -- (Required) The app's authorization module that uses `use Permit`.
@@ -47,7 +53,7 @@ defmodule Permit.Phoenix.Types do
     - `id_param_name` -- (Required, if singular record actions are present) The parameter name used to look for IDs of resources, passed to the loader function or the repo.
     - `fallback_path` -- (Optional) A string denoting redirect path when unauthorized. Defaults to "/".
     - `error_msg` -- (Optional) An error message to put into the flash when unauthorizd. Defaults to "You do not have permission to perform this action."
-    - `handle_unauthorized - (Optional) A function taking (conn), performing specific action when authorization is not successful. Defaults to redirecting to :fallback_path.
+    - `handle_unauthorized` - (Optional) A function taking (action, conn), performing specific action when authorization is not successful. Defaults to redirecting to :fallback_path.
     """
 
     @type plug_opts :: [

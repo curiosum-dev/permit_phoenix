@@ -5,11 +5,11 @@
   <p><strong>Phoenix Framework and LiveView integration for Permit - Authorization made simple for controllers and live views.
 </strong></p>
 
-  [![Contact Us](https://img.shields.io/badge/Contact%20Us-%23F36D2E?style=for-the-badge&logo=maildotru&logoColor=white&labelColor=F36D2E)](https://curiosum.com/contact)
-  [![Visit Curiosum](https://img.shields.io/badge/Visit%20Curiosum-%236819E6?style=for-the-badge&logo=elixir&logoColor=white&labelColor=6819E6)](https://curiosum.com/services/elixir-software-development)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-1D0642?style=for-the-badge&logo=open-source-initiative&logoColor=white&labelColor=1D0642)]()
-</div>
+[![Contact Us](https://img.shields.io/badge/Contact%20Us-%23F36D2E?style=for-the-badge&logo=maildotru&logoColor=white&labelColor=F36D2E)](https://curiosum.com/contact)
+[![Visit Curiosum](https://img.shields.io/badge/Visit%20Curiosum-%236819E6?style=for-the-badge&logo=elixir&logoColor=white&labelColor=6819E6)](https://curiosum.com/services/elixir-software-development)
+[![License: MIT](https://img.shields.io/badge/License-MIT-1D0642?style=for-the-badge&logo=open-source-initiative&logoColor=white&labelColor=1D0642)]()
 
+</div>
 
 <br/>
 
@@ -18,6 +18,7 @@
 Permit.Phoenix provides seamless authorization integration for Phoenix Framework applications, enabling consistent permission checking across controllers and LiveViews without code duplication.
 
 Key features:
+
 - **Automatic authorization** - Plug-based controllers and LiveViews authorize actions automatically
 - **Resource preloading** - Automatically load and scope single database records and lists based on user permissions
 - **LiveView 1.0+ support** - Optional integration with streams and modern LiveView features
@@ -108,6 +109,7 @@ Basic controller and LiveView integration examples:
 ## Default action mapping
 
 By default, `Permit.Phoenix.Actions` provides the following action mapping:
+
 ```elixir
 %{
   new: [:create],
@@ -116,6 +118,7 @@ By default, `Permit.Phoenix.Actions` provides the following action mapping:
   edit: [:update]
 }
 ```
+
 This means that accessing the `:new` action will require the `:create` permission, accessing the `:index` or `:show` action will require the `:read` permission, and accessing `:edit` will require the `:update` permission - this is for convenience when using default Phoenix action names.
 
 ```elixir
@@ -128,15 +131,17 @@ end
 ### Controllers
 
 All options of `Permit.Phoenix.Controller` can be provided as option keywords with `use Permit.Phoenix.Controller` or as callback implementations. For example, defining a `handle_unauthorized: fn action, conn -> ... end` option is equivalent to:
+
 ```elixir
 @impl true
 def handle_unauthorized(action, conn), do: ...
 ```
 
 In practice, it depends on use case:
-* when providing options for different actions, etc., consider using callback implementations
-* if you want to provide values as literals instead of functions, consider using option keywords
-* for global settings throughout controllers using `use MyAppWeb, :controller`, set globals as keywords, and override in specific controllers using callback implementations.
+
+- when providing options for different actions, etc., consider using callback implementations
+- if you want to provide values as literals instead of functions, consider using option keywords
+- for global settings throughout controllers using `use MyAppWeb, :controller`, set globals as keywords, and override in specific controllers using callback implementations.
 
 Whenever `resolution_context` is referred to, it is typified by `Permit.Types.resolution_context`.
 
@@ -189,6 +194,7 @@ end
 ```
 
 #### Global usage with settings in specific controllers
+
 ```elixir
 defmodule MyAppWeb do
   def controller do
@@ -304,6 +310,146 @@ defmodule MyAppWeb.Router do
 end
 ```
 
+#### Using with Phoenix Scopes
+
+Permit.Phoenix LiveView and Controller integrations supports [Phoenix Scopes](https://hexdocs.pm/phoenix/scopes.html) (available in Phoenix 1.8+), which are data structures that hold information about the current request or session (current user, organization, permissions, etc.). Scopes are particularly useful for multi-tenant applications or when you need to maintain more than just user information.
+
+##### When to use Phoenix Scopes with Permit
+
+Use Phoenix Scopes when:
+
+- You have multi-tenant applications (e.g., users belong to organizations)
+- You need to maintain additional context beyond the current user (e.g., current team, workspace)
+- You're using `mix phx.gen.auth` (which automatically generates a scope)
+- You want to follow Phoenix's recommended patterns for access control
+
+Use the traditional `:current_user` approach when:
+
+- You have a simple single-tenant application
+- Only user information is needed for authorization
+- You prefer explicit user-based permissions
+
+##### Configuration with Phoenix Scopes
+
+First, ensure your scope is defined (usually generated by `mix phx.gen.auth`):
+
+```elixir
+# lib/my_app/accounts/scope.ex
+defmodule MyApp.Accounts.Scope do
+  alias MyApp.Accounts.User
+
+  defstruct user: nil
+
+  def for_user(%User{} = user) do
+    %__MODULE__{user: user}
+  end
+
+  def for_user(nil), do: nil
+end
+```
+
+Examples below are for LiveView, but configuration for controllers is identical - using `use` option keywords or callback implementations.
+
+Then, configure your LiveView to use scopes - in the current version of Phoenix (>= 1.8) and LiveView, this is really all you need to do now:
+```elixir
+defmodule MyAppWeb.ArticleLive.Index do
+  # Put it in the controller, or the `MyAppWeb` module's `live_view` function
+  use Permit.Phoenix.LiveView,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article
+
+  # If you're using Phoenix >=1.8's `mix phx.gen.auth` and only need to authorize against,
+  # the current user (`@current_scope.user`), that's all!
+end
+```
+
+For compatibility with projects created with Phoenix <1.8, or when using a custom configuration, you can disable scope-based authorization and use the traditional approach:
+
+```elixir
+defmodule MyAppWeb do
+  def live_view do
+    quote do
+      use Permit.Phoenix.LiveView,
+        authorization_module: MyApp.Authorization,
+        resource_module: MyApp.Article,
+        scope_subject: :admin # Use the admin key as the subject by default
+        use_scope?: false, # Switch to authorizing against @current_user
+        fetch_subject: fn _socket, session -> ... end # Fetch the subject from the session
+    end
+  end
+end
+```
+Then, you can override the options in a specific LiveView using callbacks - see traditional configuration example below.
+
+##### Custom Scope-Subject Mapping
+
+You can configure that the subject should be the entire scope struct, instead of just the user key, by setting `scope_subject` to `scope` itself, or perhaps a different key in the scope, e.g. `:admin`.
+
+```elixir
+defmodule MyAppWeb.ArticleLive.Index do
+  use MyAppWeb, :live_view
+
+  # Use a different key (e.g. `@current_scope.admin`), or the entire scope as the
+  # subject
+  @impl true
+  def scope_subject(scope), do: scope
+
+  @impl true
+  def mount(_params, _session, socket) do
+    # socket.assigns.current_scope contains whatever is needed in the app's context
+    {:ok, socket}
+  end
+end
+```
+
+If you've configured `scope_subject` as `scope` itself, inside the `can/1` predicates you'll have access to the entire scope struct.
+Update your permissions to work with scopes:
+
+```elixir
+defmodule MyApp.Permissions do
+  use Permit.Ecto.Permissions, actions_module: MyApp.Actions
+
+  # The subject passed will be the scope struct
+  def can(%MyApp.Accounts.Scope{user: %{id: user_id}}) do
+    permit()
+    |> read(MyApp.Article, user_id: user_id)
+    |> create(MyApp.Article)
+  end
+
+  def can(_scope), do: permit()
+end
+```
+
+##### Configuration without Phoenix Scopes (Traditional)
+
+For applications not using Phoenix Scopes, continue using the traditional approach:
+
+```elixir
+defmodule MyAppWeb.ArticleLive.Index do
+  use MyAppWeb, :live_view
+
+  # For Phoenix projects bootstrapped below 1.8, disable scope-based authorization
+  # (will take current user from the :current_user assign)
+  @impl true
+  def use_scope?, do: false
+
+  # Optional - if you need to fetch the subject differently than by default (from
+  # the :current_scope assign or the current_user assign)
+  @impl true
+  def fetch_subject(_socket, session) do
+    # Fetch and return the current user directly
+    user_token = session["user_token"]
+    user_token && MyApp.Accounts.get_user_by_session_token(user_token)
+  end
+
+  @impl true
+  def mount(_params, _session, socket) do
+    # The user is available as socket.assigns.current_user
+    {:ok, socket}
+  end
+end
+```
+
 #### LiveView configuration
 
 Permit.Phoenix.LiveView performs authorization at three key points:
@@ -312,12 +458,9 @@ Permit.Phoenix.LiveView performs authorization at three key points:
 2. **During live navigation** - when `handle_params/3` is called and `:live_action` changes
 3. **During events** - when `handle_event/3` is called for events defined in `event_mapping/0`
 
-
 In a similar way to configuring controllers, LiveViews can be configured with option keywords or callback implementations, thus let's omit lengthy examples of both.
 
 Most options are similar to controller options, with `socket` in place of `conn`.
-
-Note that it is mandatory to implement the `fetch_subject` callback, so it is recommended to put it as shared configuration in your web app module.
 
 ```elixir
 defmodule PermitTestWeb.ArticleLive.Index do
@@ -348,11 +491,6 @@ defmodule PermitTestWeb.ArticleLive.Index do
     # Alternatively you can implement a callback to do something different,
     # for instance you can do {:cont, ...} and assign something to the socket
     # to display a message.
-  end
-
-  @impl true
-  def fetch_subject(_socket, session) do
-    # Retrieve the current user from session
   end
 end
 ```
@@ -456,12 +594,12 @@ end
 
 Permit.Phoenix is part of the modular Permit ecosystem:
 
-| Package | Version | Description |
-|---------|---------|-------------|
-| **[permit](https://hex.pm/packages/permit)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit.svg)](https://hex.pm/packages/permit) | Core authorization library |
-| **[permit_ecto](https://hex.pm/packages/permit_ecto)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_ecto.svg)](https://hex.pm/packages/permit_ecto) | Ecto integration for database queries |
-| **[permit_phoenix](https://hex.pm/packages/permit_phoenix)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_phoenix.svg)](https://hex.pm/packages/permit_phoenix) | Phoenix Controllers & LiveView integration |
-| **[permit_absinthe](https://github.com/curiosum-dev/permit_absinthe)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_absinthe.svg)](https://hex.pm/packages/permit_absinthe) | GraphQL API authorization via Absinthe |
+| Package                                                                | Version                                                                                                  | Description                                |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **[permit](https://hex.pm/packages/permit)**                           | [![Hex.pm](https://img.shields.io/hexpm/v/permit.svg)](https://hex.pm/packages/permit)                   | Core authorization library                 |
+| **[permit_ecto](https://hex.pm/packages/permit_ecto)**                 | [![Hex.pm](https://img.shields.io/hexpm/v/permit_ecto.svg)](https://hex.pm/packages/permit_ecto)         | Ecto integration for database queries      |
+| **[permit_phoenix](https://hex.pm/packages/permit_phoenix)**           | [![Hex.pm](https://img.shields.io/hexpm/v/permit_phoenix.svg)](https://hex.pm/packages/permit_phoenix)   | Phoenix Controllers & LiveView integration |
+| **[permit_absinthe](https://github.com/curiosum-dev/permit_absinthe)** | [![Hex.pm](https://img.shields.io/hexpm/v/permit_absinthe.svg)](https://hex.pm/packages/permit_absinthe) | GraphQL API authorization via Absinthe     |
 
 ## Documentation
 
@@ -487,8 +625,8 @@ Just clone the repository, install dependencies normally, develop and run tests.
 
 ## Contact
 
-* Library maintainer: [Michał Buszkiewicz](https://github.com/vincentvanbush)
-* [**Curiosum**](https://curiosum.com) - Elixir development team behind Permit
+- Library maintainer: [Michał Buszkiewicz](https://github.com/vincentvanbush)
+- [**Curiosum**](https://curiosum.com) - Elixir development team behind Permit
 
 ## License
 
