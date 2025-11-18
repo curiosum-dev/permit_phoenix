@@ -107,6 +107,16 @@ jobs:
       - name: Run tests
         run: mix coveralls.json
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
+        uses: nick-fields/retry@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          timeout_minutes: 2
+          max_attempts: 3
+          retry_on: error
+          command: |
+            curl -LO https://cli.codecov.io/latest/linux/codecov
+            if [ ! -f codecov ] || [ ! -s codecov ]; then
+              echo "Download failed or file is empty"
+              exit 1
+            fi
+            chmod +x codecov
+            ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }}
