@@ -558,6 +558,8 @@ end
 
 LiveView error handling in Permit.Phoenix covers both navigation-based authorization (via `:live_action`) and event-based authorization. Understanding when to use `{:cont, socket}` vs `{:halt, socket}` and the role of navigation is crucial for proper error handling.
 
+**By default**, authorization errors result in displaying a flash message (customizable using the `:unauthorized_message` option or callback). If needed (e.g. entering a route via a direct link from outside a LiveView session), the `:fallback_path` option is configurable so it can be navigated to (defaulting to `/`).
+
 Permit.Phoenix provides a useful `mounting?/1` function to help you determine the appropriate error handling response - which may be different depending on whether the page is being rendered server-side, or it is dealing with in-place navigation via `handle_params`.
 
 ```elixir

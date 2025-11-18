@@ -1,6 +1,6 @@
 defmodule Permit.EctoFakeApp.SessionController do
   @moduledoc false
-  use Phoenix.Controller
+  use Phoenix.Controller, formats: [html: "View"]
 
   alias Permit.EctoFakeApp.User
   alias Permit.EctoFakeApp.Scope

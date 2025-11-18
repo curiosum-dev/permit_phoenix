@@ -8,6 +8,7 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
   alias Permit.EctoLiveViewTest.HooksWithLoaderLive
   alias Permit.EctoLiveViewTest.HooksLive
   alias Permit.EctoLiveViewTest.HooksWithCustomOptsLive
+  alias Permit.EctoLiveViewTest.DefaultBehaviorLive
 
   scope "/" do
     live_session :authenticated,
@@ -29,6 +30,11 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
 
       live("/live_action_plurality", ActionPluralityLive, :list)
       live("/live_action_plurality/:id", ActionPluralityLive, :view)
+
+      live("/default_items", DefaultBehaviorLive, :index)
+      live("/default_items/new", DefaultBehaviorLive, :new)
+      live("/default_items/:id/edit", DefaultBehaviorLive, :edit)
+      live("/default_items/:id", DefaultBehaviorLive, :show)
     end
   end
 

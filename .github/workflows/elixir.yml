@@ -2,9 +2,9 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -18,28 +18,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Elixir
-      uses: erlef/setup-beam@v1
-      with:
-        elixir-version: '1.17'
-        otp-version: '27'
-    - name: Restore dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: deps
-        key: ${{ runner.os }}-elixir-1.17-otp-27-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-elixir-1.17-otp-27-mix-
-    - name: Install dependencies
-      run: mix deps.get
-      env:
-        LIVE_VIEW_VERSION: '0.20.17'
-        PHOENIX_VERSION: '1.7.21'
-    - name: Dialyzer
-      run: MIX_ENV=test mix dialyzer
-    - name: Credo
-      run: MIX_ENV=test mix credo
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Set up Elixir
+        uses: erlef/setup-beam@e6d7c94229049569db56a7ad5a540c051a010af9 # v1.20.4
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+      - name: Restore dependencies cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: deps
+          key: ${{ runner.os }}-elixir-1.19-otp-28-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-1.19-otp-28-mix-
+      - name: Install dependencies
+        run: mix deps.get
+        env:
+          LIVE_VIEW_VERSION: "1.1.17"
+          PHOENIX_VERSION: "1.8.1"
+      - name: Dialyzer
+        run: MIX_ENV=test mix dialyzer
+      - name: Credo
+        run: MIX_ENV=test mix credo
 
   build:
     name: Build and test
@@ -63,49 +63,50 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        elixir_version: ['1.13', '1.14', '1.15', '1.16', '1.17']
-        otp_version: ['26', '27']
-        phoenix_version: ['1.7.21', '1.6.16']
-        phoenix_live_view_version: ['1.0.12', '0.20.17']
+        elixir_version: ["1.15", "1.16", "1.17", "1.18", "1.19"]
+        otp_version: ["26", "27", "28"]
+        phoenix_version: ["1.7.21", "1.6.16", "1.8.1"]
+        phoenix_live_view_version: ["1.1.17", "1.0.12", "0.20.17"]
         exclude:
-          - elixir_version: '1.13'
-            otp_version: '26'
-          - elixir_version: '1.13'
-            otp_version: '27'
-
-          - elixir_version: '1.14'
-            otp_version: '27'
-
-          - elixir_version: '1.15'
-            otp_version: '27'
-
-          - elixir_version: '1.16'
-            otp_version: '27'
+          - elixir_version: "1.15"
+            otp_version: "27"
+          - elixir_version: "1.15"
+            otp_version: "28"
+          - elixir_version: "1.16"
+            otp_version: "27"
+          - elixir_version: "1.16"
+            otp_version: "28"
+          - elixir_version: "1.17"
+            otp_version: "28"
+          - elixir_version: "1.18"
+            otp_version: "28"
+          - phoenix_live_view_version: "0.20.17"
+            phoenix_version: "1.8.1"
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Elixir
-      uses: erlef/setup-beam@v1
-      with:
-        elixir-version: ${{ matrix.elixir_version }}
-        otp-version: ${{ matrix.otp_version }}
-    - name: Restore dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: deps
-        key: ${{ runner.os }}-elixir-${{ matrix.elixir_version }}-otp-${{ matrix.otp_version }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-elixir-${{ matrix.elixir_version }}-otp-${{ matrix.otp_version }}-mix-
-    - name: Install dependencies
-      run: mix deps.get
-      env:
-        LIVE_VIEW_VERSION: ${{ matrix.phoenix_live_view_version }}
-        PHOENIX_VERSION: ${{ matrix.phoenix_version }}
-    - name: Create DB
-      run: mix do ecto.create, ecto.migrate
-    - name: Run tests
-      run: mix coveralls.json
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v4.0.1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Set up Elixir
+        uses: erlef/setup-beam@e6d7c94229049569db56a7ad5a540c051a010af9 # v1.20.4
+        with:
+          elixir-version: ${{ matrix.elixir_version }}
+          otp-version: ${{ matrix.otp_version }}
+      - name: Restore dependencies cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: deps
+          key: ${{ runner.os }}-elixir-${{ matrix.elixir_version }}-otp-${{ matrix.otp_version }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-${{ matrix.elixir_version }}-otp-${{ matrix.otp_version }}-mix-
+      - name: Install dependencies
+        run: mix deps.get
+        env:
+          LIVE_VIEW_VERSION: ${{ matrix.phoenix_live_view_version }}
+          PHOENIX_VERSION: ${{ matrix.phoenix_version }}
+      - name: Create DB
+        run: mix do ecto.create, ecto.migrate
+      - name: Run tests
+        run: mix coveralls.json
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

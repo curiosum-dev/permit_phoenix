@@ -198,6 +198,31 @@ defmodule Permit.Phoenix.LiveView do
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
   end
 
+  @doc ~S"""
+  Called when authorization fails either in `handle_event` or `handle_params` (both during
+  mounting and navigation). `{:cont, ...}` or `{:halt, ...}` can be used to either continue
+  executing the normal handlers or halt.
+
+  Defaults to halting, displaying a flash and staying on the same page if possible, either
+  via not navigating at all or by navigating to `_live_referer` - otherwise (e.g. when entering
+  a page from outside a LiveView session) redirects to `:fallback_path`, defaulting to `/`.
+
+  ## Example
+
+      # Default implementation
+      @impl true
+      def handle_unauthorized(action, socket) do
+        # navigate_if_mounting/2 calls push_navigate/2 if Permit.Phoenix.LiveView.mounting?/1 returns true
+        {:halt,
+         socket
+         |> put_flash(:error, socket.view.unauthorized_message(action, socket))
+         |> navigate_if_mounting(to: socket.view.fallback_path(action, socket))}
+      end
+
+      defp navigate_if_mounting(socket, opts) do
+        if mounting?(socket), do: navigate(socket, arg), else: socket
+      end
+  """
   @callback handle_unauthorized(Types.action_group(), PhoenixTypes.socket()) ::
               PhoenixTypes.hook_outcome()
   @callback fetch_subject(PhoenixTypes.socket(), map()) :: Types.subject()
@@ -477,7 +502,7 @@ defmodule Permit.Phoenix.LiveView do
         {:halt,
          socket
          |> put_flash(:error, socket.view.unauthorized_message(action, socket))
-         |> navigate(to: socket.view.fallback_path(action, socket))}
+         |> navigate_if_mounting(to: socket.view.fallback_path(action, socket))}
 
       fun when is_function(fun) ->
         fun.(action, socket)
@@ -502,9 +527,27 @@ defmodule Permit.Phoenix.LiveView do
   @doc false
   def fallback_path(action, socket, opts) do
     case opts[:fallback_path] do
-      nil -> "/"
-      fun when is_function(fun) -> fun.(action, socket)
-      path -> path
+      nil ->
+        try do
+          referer_url = get_connect_params(socket)["_live_referer"]
+
+          if referer_url,
+            do:
+              URI.parse(referer_url)
+              |> then(fn
+                %{path: path, query: nil} -> path
+                %{path: path, query: query} -> "#{path}?#{query}"
+              end),
+            else: "/"
+        rescue
+          RuntimeError -> "/"
+        end
+
+      fun when is_function(fun) ->
+        fun.(action, socket)
+
+      path ->
+        path
     end
   end
 
@@ -567,6 +610,10 @@ defmodule Permit.Phoenix.LiveView do
       struct_field_name_fn when is_function(struct_field_name_fn) ->
         struct_field_name_fn.(action, socket)
     end
+  end
+
+  defp navigate_if_mounting(socket, arg) do
+    if mounting?(socket), do: navigate(socket, arg), else: socket
   end
 
   defp navigate(socket, arg) do
