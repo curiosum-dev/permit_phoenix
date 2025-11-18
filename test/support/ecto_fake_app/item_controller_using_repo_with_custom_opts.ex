@@ -1,6 +1,6 @@
 defmodule Permit.EctoFakeApp.ItemControllerUsingRepoWithCustomOpts do
   @moduledoc false
-  use Phoenix.Controller
+  use Phoenix.Controller, formats: [html: "View"]
 
   alias Permit.EctoFakeApp.{Authorization, Item}
 

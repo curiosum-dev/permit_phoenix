@@ -24,14 +24,7 @@ defmodule Permit.Phoenix.MixProject do
         flags: [:unmatched_returns, :error_handling]
       ],
       docs: docs(),
-      test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test
-      ]
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -56,6 +49,18 @@ defmodule Permit.Phoenix.MixProject do
     ]
   end
 
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
+    ]
+  end
+
   defp elixirc_paths(:test), do: ["lib", "test/support", "test/support/", "test/permit/support"]
   defp elixirc_paths(_), do: ["lib"]
 
@@ -76,7 +81,8 @@ defmodule Permit.Phoenix.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:versioce, "~> 2.0.0", only: [:dev, :test], runtime: false},
       {:git_cli, "~> 0.3.0", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.18", only: :test, runtime: false}
+      {:excoveralls, "~> 0.18", only: :test, runtime: false},
+      {:lazy_html, ">= 0.1.0", only: :test}
     ]
   end
 
