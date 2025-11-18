@@ -312,7 +312,7 @@ end
 
 #### Using with Phoenix Scopes
 
-Permit.Phoenix LiveView integration supports [Phoenix Scopes](https://hexdocs.pm/phoenix/scopes.html) (available in Phoenix 1.8+), which are data structures that hold information about the current request or session (current user, organization, permissions, etc.). Scopes are particularly useful for multi-tenant applications or when you need to maintain more than just user information.
+Permit.Phoenix LiveView and Controller integrations supports [Phoenix Scopes](https://hexdocs.pm/phoenix/scopes.html) (available in Phoenix 1.8+), which are data structures that hold information about the current request or session (current user, organization, permissions, etc.). Scopes are particularly useful for multi-tenant applications or when you need to maintain more than just user information.
 
 ##### When to use Phoenix Scopes with Permit
 
@@ -348,40 +348,61 @@ defmodule MyApp.Accounts.Scope do
 end
 ```
 
-Then, configure your LiveView to use scopes:
+Examples below are for LiveView, but configuration for controllers is identical - using `use` option keywords or callback implementations.
+
+Then, configure your LiveView to use scopes - in the current version of Phoenix (>= 1.8) and LiveView, this is really all you need to do now:
+```elixir
+defmodule MyAppWeb.ArticleLive.Index do
+  # Put it in the controller, or the `MyAppWeb` module's `live_view` function
+  use Permit.Phoenix.LiveView,
+    authorization_module: MyApp.Authorization,
+    resource_module: MyApp.Article
+
+  # If you're using Phoenix >=1.8's `mix phx.gen.auth` and only need to authorize against,
+  # the current user (`@current_scope.user`), that's all!
+end
+```
+
+For compatibility with projects created with Phoenix <1.8, or when using a custom configuration, you can disable scope-based authorization and use the traditional approach:
+
+```elixir
+defmodule MyAppWeb do
+  def live_view do
+    quote do
+      use Permit.Phoenix.LiveView,
+        authorization_module: MyApp.Authorization,
+        resource_module: MyApp.Article,
+        scope_subject: :admin # Use the admin key as the subject by default
+        use_scope?: false, # Switch to authorizing against @current_user
+        fetch_subject: fn _socket, session -> ... end # Fetch the subject from the session
+    end
+  end
+end
+```
+Then, you can override the options in a specific LiveView using callbacks - see traditional configuration example below.
+
+##### Custom Scope-Subject Mapping
+
+You can configure that the subject should be the entire scope struct, instead of just the user key, by setting `scope_subject` to `scope` itself, or perhaps a different key in the scope, e.g. `:admin`.
 
 ```elixir
 defmodule MyAppWeb.ArticleLive.Index do
   use MyAppWeb, :live_view
 
-  use Permit.Phoenix.LiveView,
-    authorization_module: MyApp.Authorization,
-    resource_module: MyApp.Article
-
-  # For Phoenix projects bootstrapped below 1.8, disable scope-based authorization
-  # (will take current user from the :current_user assign)
+  # Use a different key (e.g. `@current_scope.admin`), or the entire scope as the
+  # subject
   @impl true
-  def use_scope?, do: false
-
-  # Optional - if you need to fetch the subject differently than by default (from
-  # the :current_scope assign or the current_user assign)
-  @impl true
-  def fetch_subject(_socket, session) do
-    # Fetch and return the current scope
-    user_token = session["user_token"]
-    user = user_token && MyApp.Accounts.get_user_by_session_token(user_token)
-    MyApp.Accounts.Scope.for_user(user)
-  end
+  def scope_subject(scope), do: scope
 
   @impl true
   def mount(_params, _session, socket) do
-    # The scope is available as socket.assigns.current_scope
-    # Authorization will use socket.assigns.current_scope.user
+    # socket.assigns.current_scope contains whatever is needed in the app's context
     {:ok, socket}
   end
 end
 ```
 
+If you've configured `scope_subject` as `scope` itself, inside the `can/1` predicates you'll have access to the entire scope struct.
 Update your permissions to work with scopes:
 
 ```elixir
@@ -407,14 +428,13 @@ For applications not using Phoenix Scopes, continue using the traditional approa
 defmodule MyAppWeb.ArticleLive.Index do
   use MyAppWeb, :live_view
 
-  use Permit.Phoenix.LiveView,
-    authorization_module: MyApp.Authorization,
-    resource_module: MyApp.Article
-
-  # Scopes are disabled by default, but you can be explicit
+  # For Phoenix projects bootstrapped below 1.8, disable scope-based authorization
+  # (will take current user from the :current_user assign)
   @impl true
   def use_scope?, do: false
 
+  # Optional - if you need to fetch the subject differently than by default (from
+  # the :current_scope assign or the current_user assign)
   @impl true
   def fetch_subject(_socket, session) do
     # Fetch and return the current user directly
@@ -441,8 +461,6 @@ Permit.Phoenix.LiveView performs authorization at three key points:
 In a similar way to configuring controllers, LiveViews can be configured with option keywords or callback implementations, thus let's omit lengthy examples of both.
 
 Most options are similar to controller options, with `socket` in place of `conn`.
-
-Note that it is mandatory to implement the `fetch_subject` callback, so it is recommended to put it as shared configuration in your web app module.
 
 ```elixir
 defmodule PermitTestWeb.ArticleLive.Index do
@@ -473,11 +491,6 @@ defmodule PermitTestWeb.ArticleLive.Index do
     # Alternatively you can implement a callback to do something different,
     # for instance you can do {:cont, ...} and assign something to the socket
     # to display a message.
-  end
-
-  @impl true
-  def fetch_subject(_socket, session) do
-    # Retrieve the current user from session
   end
 end
 ```

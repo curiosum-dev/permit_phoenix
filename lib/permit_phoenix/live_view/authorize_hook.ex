@@ -231,7 +231,7 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         socket.view.fetch_subject(socket, session)
 
       socket.view.use_scope?() ->
-        socket.assigns[:current_scope].user
+        socket.view.scope_subject(socket.assigns[:current_scope])
 
       true ->
         socket.assigns[:current_user]

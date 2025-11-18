@@ -9,29 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support for Phoenix Scopes integration in LiveViews (#33)
+- [Breaking] Support for Phoenix Scopes integration in LiveViews & controllers (#33)
 
   LiveViews can now integrate with [Phoenix Scopes](https://hexdocs.pm/phoenix/scopes.html) (available in Phoenix 1.8+) for authorization. When enabled via the `use_scope?/0` callback, the LiveView will use `:current_scope` instead of `:current_user` for the subject assign. This is particularly useful for multi-tenant applications or when additional context beyond the user is needed. Example:
 
+  To bootstrap it in the current version of Phoenix (>= 1.8) and LiveView, this is really all you need to do now:
   ```elixir
   defmodule MyAppWeb.ArticleLive.Index do
+    # Put it in the controller, or the `MyAppWeb` module's `live_view` function
     use Permit.Phoenix.LiveView,
       authorization_module: MyApp.Authorization,
       resource_module: MyApp.Article
 
-    # Enable scope-based authorization
-    @impl true
-    def use_scope?, do: true
-
-    @impl true
-    def fetch_subject(_socket, session) do
-      # Return a scope struct instead of just a user
-      user_token = session["user_token"]
-      user = user_token && MyApp.Accounts.get_user_by_session_token(user_token)
-      MyApp.Accounts.Scope.for_user(user)
-    end
+    # If you're using Phoenix >=1.8's `mix phx.gen.auth` and only need to authorize against,
+    # the current user (`@current_scope.user`), that's all!
   end
   ```
+
+  Options can be set using `use` options or callback implementations. You can switch to authorizing against `@current_user`, using a different scope key (or the entire scope) as the subject, or fetch the subject from the session.
+  See the README for a full configuration guidance.
+  ```
+
+  In Controllers, likewise, you can use the :use_scope? option or callback to enable or disable scope-based subject assignment.
+
+### Changed
+
+- [Breaking] Permit.Phoenix.LiveView no longer needs to have the `fetch_subject/2` callback implemented, and its result is no longer assigned to the `:current_user` assign - so that Permit no longer interferes with your assigns. This was a leftover from before `mix phx.gen.auth` became the de facto standard.
 
 ## [0.3.1]
 

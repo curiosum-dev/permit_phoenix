@@ -39,6 +39,11 @@ defmodule Permit.Phoenix.Types do
   """
   @type handle_unauthorized :: (Types.action_group(), conn() -> conn())
 
+  @typedoc """
+  Maps the current Phoenix scope to the subject.
+  """
+  @type scope_subject :: (map() -> Types.subject()) | atom()
+
   if @permit_ecto_available? do
     @typedoc """
     - `:authorization_module` -- (Required) The app's authorization module that uses `use Permit`.
