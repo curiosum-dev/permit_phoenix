@@ -123,20 +123,26 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
     socket
     |> attach_hooks(params, session)
-    |> authenticate_and_authorize!(action, session, params)
+    |> authenticate_and_authorize!(action, session, params, :handle_params)
   end
 
-  defp authenticate_and_authorize!(socket, action, session, params) do
+  defp authenticate_and_authorize!(socket, action, session, params, action_origin) do
     socket
-    |> authorize(session, action, params)
+    |> authorize(session, action, params, action_origin)
     |> respond()
   end
 
-  @spec authorize(PhoenixTypes.socket(), PhoenixTypes.session(), Types.action_group(), map()) ::
+  @spec authorize(
+          PhoenixTypes.socket(),
+          PhoenixTypes.session(),
+          Types.action_group(),
+          map(),
+          atom()
+        ) ::
           PhoenixTypes.live_authorization_result()
-  defp authorize(socket, session, action, params) do
+  defp authorize(socket, session, action, params, action_origin) do
     if action in socket.view.preload_actions() do
-      preload_and_authorize(socket, session, action, params)
+      preload_and_authorize(socket, session, action, params, action_origin)
     else
       just_authorize(socket, session, action)
     end
@@ -165,10 +171,11 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
           PhoenixTypes.socket(),
           PhoenixTypes.session(),
           Types.action_group(),
-          map()
+          map(),
+          atom()
         ) ::
           PhoenixTypes.live_authorization_result()
-  defp preload_and_authorize(socket, session, action, params) do
+  defp preload_and_authorize(socket, session, action, params, action_origin) do
     view = socket.view
     use_loader? = view.use_loader?()
 
@@ -188,6 +195,20 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
       else
         {:loaded_resources, :loaded_resource, &resolver_module.authorize_and_preload_all!/5}
       end
+
+    id_param_name = view.id_param_name(action, socket)
+    id_struct_field_name = view.id_struct_field_name(action, socket)
+
+    params =
+      if action_origin == :handle_event and singular? do
+        Map.put_new_lazy(params, id_param_name, fn ->
+          Map.get(socket.assigns[load_key], id_struct_field_name)
+        end)
+      else
+        params
+      end
+
+    dbg(auth_function)
 
     case auth_function.(
            subject,
@@ -279,13 +300,20 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
       # has already been done in the on_mount/4 callback implementation.
       if Permit.Phoenix.LiveView.mounting?(socket),
         do: {:cont, socket},
-        else: authenticate_and_authorize!(socket, socket.assigns.live_action, session, params)
+        else:
+          authenticate_and_authorize!(
+            socket,
+            socket.assigns.live_action,
+            session,
+            params,
+            :handle_params
+          )
     end)
     |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
                                                                             params,
                                                                             socket ->
       if action = socket.view.event_mapping()[event] do
-        authenticate_and_authorize!(socket, action, session, params)
+        authenticate_and_authorize!(socket, action, session, params, :handle_event)
       else
         {:cont, socket}
       end
