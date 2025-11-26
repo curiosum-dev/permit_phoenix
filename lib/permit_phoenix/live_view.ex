@@ -486,7 +486,8 @@ defmodule Permit.Phoenix.LiveView do
           singular_actions: 0,
           use_stream?: 1,
           use_scope?: 0,
-          scope_subject: 1
+          scope_subject: 1,
+          reload_on_event?: 2
         ]
         |> Enum.filter(& &1)
       )
