@@ -261,6 +261,19 @@ defmodule Permit.Phoenix.LiveView do
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
   @callback unauthorized_message(PhoenixTypes.socket(), map()) :: binary()
   @callback event_mapping() :: map()
+  @doc ~S"""
+  For events that do not carry an `"id"` param (e.g. updating a record with form data), determines whether to reload the record before each event authorization.
+
+  Defaults to `true`.
+
+  ## Example
+
+      @impl true
+      def reload_on_event?(_action, _socket) do
+        true
+      end
+  """
+  @callback reload_on_event?(Types.action_group(), PhoenixTypes.socket()) :: boolean()
   @callback use_stream?(PhoenixTypes.socket()) :: boolean()
   @doc ~S"""
   Determines whether to use Phoenix Scopes for fetching the subject. Set to `false` in Phoenix <1.8.
@@ -307,6 +320,7 @@ defmodule Permit.Phoenix.LiveView do
                         handle_not_found: 1,
                         unauthorized_message: 2,
                         use_stream?: 1,
+                        reload_on_event?: 2,
                         use_scope?: 0,
                         scope_subject: 1
                       ]
@@ -410,6 +424,15 @@ defmodule Permit.Phoenix.LiveView do
         case unquote(opts[:use_stream?]) do
           fun when is_function(fun) -> fun.(socket) || false
           other -> other || false
+        end
+      end
+
+      @impl true
+      def reload_on_event?(action, socket) do
+        case unquote(opts[:reload_on_event?]) do
+          fun when is_function(fun) -> fun.(action, socket)
+          nil -> true
+          other -> other
         end
       end
 
