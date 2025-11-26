@@ -373,7 +373,7 @@ defmodule Permit.Phoenix.LiveView do
 
       @impl true
       def preload_actions,
-        do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index, :delete]
+        do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index, :delete, :update]
 
       @impl true
       def fallback_path(action, socket) do
