@@ -203,6 +203,22 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
              use_loader?: use_loader?
            }
          ) do
+      # In events related to single-record actions like "delete", event params typically
+      # contain the record ID [socket.view.id_param_name(action, socket)].
+      #
+      # In events triggered by a form, params contain only the form's payload and not the
+      # record ID. This usually means that we're in a LiveView like "Edit", in which we load
+      # and assign the record on mount, before the user triggers the event.
+      # In this case, we need to assume that the record is in `assigns[:loaded_resource]`.
+      #
+      # The default behaviour with Permit.Ecto is to reload the record to ensure that another
+      # agent did not change the record concurrently in a way that might affect authorization.
+      #
+      # If `use_loader?` is true (or there is no Permit.Ecto), by default, we will reload the
+      # record using the loader function and it's on the developer to ensure event params and
+      # socket assigns contain everything necessary to load the record.
+      #
+      # The developer can opt out of reloading the record by setting `reload_on_event?` to false.
       {:authorized, records} ->
         {:authorized,
          socket

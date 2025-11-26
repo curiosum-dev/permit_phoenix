@@ -137,20 +137,43 @@ defmodule Permit.Phoenix.LiveView do
   ## Event authorization
 
   Actions such as updating or deleting a resource are typically implemented in LiveView using `handle_event/3`.
-  Permit taps into `handle_event/3` processing, loads the resource with Permit.Ecto (or a loader function) based
-  on the event's `"id"` param and a query based on the currently resolved permissions and puts it in `assigns`.
-  If authorization fails, `handle_unauthorized/2` is called.
+  Permit taps into `handle_event/3` processing and, depending on the event's nature:
+  * For events carrying an `"id"` param (e.g. record deletion from an index page), **loads the record** with
+    Permit.Ecto (or a loader function) based on the ID param and a query based on the currently resolved
+    permissions and puts it in `assigns`.
+  * For events that do not carry an `"id"` param (e.g. updating a record with form data), **reloads the
+    record** currently assigned to `@loaded_resource`, using either Permit.Ecto (and the record's ID) or
+    the existing loader function. This is done by default to ensure permissions are evaluated against the
+    latest data. You can disable this behaviour by overriding `reload_on_event?/2` (or by passing the
+    `:reload_on_event?` option) if you prefer to reuse the already assigned record.
 
-  Event to action mapping must be given in the `event_mapping/0` callback. There is no default mapping as
-  event names typically suggested by Phoenix may map to different actions (e.g. Phoenix generates `"save"`
-  for both `:create` and `:update` actions).
+  Event to action mapping is given using the `@permit_action` module attribute put right before an event
+  handler.
+
+      @impl true
+      @permit_action :update
+      def handle_event("save", %{"article" => article_params}, socket) do
+        article = socket.assigns.loaded_resource
+
+        case MyApp.update_article(article_params) do
+          # ...
+        end
+      end
+
+  In this example, the `"save"` event handler is authorized against the `:update` action on `MyApp.Article`.
+
+  Note that there is no default mapping as event names typically suggested by Phoenix may map to different
+  actions (e.g. Phoenix generates `"save"` for both `:create` and `:update` actions).
+
+  When the `handle_event/3` function is not implemented using pattern matching on the first argument,
+  the `event_mapping` callback must be used instead.
 
       @impl true
       # "delete" event maps to :delete Permit action
-      def event_mapping, do: %{"delete" => :delete}
+      def event_mapping, do: %{"delete" => :delete, "remove" => :delete}
 
       @impl true
-      def handle_event("delete", _params, _socket) do
+      def handle_event(event_name, _params, _socket) when event_name in ["delete", "remove"] do
         # Resource is loaded and authorized by Permit
         article = socket.assigns.loaded_resource
 
@@ -161,6 +184,8 @@ defmodule Permit.Phoenix.LiveView do
         # Permit either streams the viewed items or assigns them (see `use_stream?/1` callback)
         {:noreply, stream_delete(socket, :loaded_resources, article)}
       end
+
+  If authorization fails, `handle_unauthorized/2` is called. Handling authorization failure is as simple as:
 
       @impl true
       def handle_unauthorized(:delete, socket) do
