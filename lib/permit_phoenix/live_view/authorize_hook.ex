@@ -141,10 +141,43 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         ) ::
           PhoenixTypes.live_authorization_result()
   defp authorize(socket, session, action, params, action_origin) do
-    if action in socket.view.preload_actions() do
-      preload_and_authorize(socket, session, action, params, action_origin)
+    cond do
+      action in socket.view.singular_actions() and action_origin == :handle_event and
+          not socket.view.reload_on_event?(action, socket) ->
+        authorize_preloaded_resource(socket, session, action)
+
+      action in socket.view.preload_actions() ->
+        preload_and_authorize(socket, session, action, params, action_origin)
+
+      true ->
+        just_authorize(socket, session, action)
+    end
+  end
+
+  defp authorize_preloaded_resource(socket, session, action) do
+    record = socket.assigns[:loaded_resource]
+
+    if !record do
+      raise ~S"""
+      #{socket.view} has the :reload_on_event? option set to false, but in processing
+      an event mapped to the #{action} action, the record was not found preloaded in
+      @loaded_resource.
+
+      It either must be ensured that the record is preloaded in @loaded_resource (e.g.
+      when the LiveView mounts), or the :reload_on_event? option must be set to true.
+      """
+    end
+
+    subject = get_subject(socket, session)
+    authorization_module = socket.view.authorization_module()
+
+    # Check authorization on the action in general, then on the specific record
+    with {:authorized, socket} <- just_authorize(socket, session, action),
+         true <-
+           authorization_module.can(subject) |> authorization_module.do?(action, record) do
+      {:authorized, socket}
     else
-      just_authorize(socket, session, action)
+      _ -> {:unauthorized, socket}
     end
   end
 
@@ -207,8 +240,6 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
       else
         params
       end
-
-    dbg(auth_function)
 
     case auth_function.(
            subject,
