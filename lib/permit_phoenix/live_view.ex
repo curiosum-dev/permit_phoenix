@@ -327,6 +327,7 @@ defmodule Permit.Phoenix.LiveView do
                       |> Enum.filter(& &1)
 
   defmacro __using__(opts) do
+    # credo:disable-for-next-line
     quote generated: true do
       import unquote(__MODULE__)
 
