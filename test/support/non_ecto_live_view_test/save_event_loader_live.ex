@@ -1,15 +1,47 @@
-defmodule Permit.EctoLiveViewTest.SaveEventLive do
+defmodule Permit.NonEctoLiveViewTest.SaveEventLoaderLive do
   @moduledoc """
   LiveView for testing handle_event with "save" events that contain form payloads
   instead of IDs. Tests both reload_on_event? behaviors.
   """
   use Phoenix.LiveView, namespace: Permit
 
-  alias Permit.EctoFakeApp.{Authorization, Item}
+  alias Permit.NonEctoFakeApp.{Authorization, Item, User}
+  alias Permit.NonEctoFakeApp.SeedData
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
-    resource_module: Item
+    resource_module: Item,
+    use_scope?: false
+
+  @items SeedData.items()
+
+  @impl Permit.Phoenix.LiveView
+  def loader(%{params: %{"id" => id}, socket: socket}) do
+    @items
+    |> Enum.find(&("#{&1.id}" == "#{id}"))
+    |> then(fn found_item ->
+      # the @dirty assign is set by the test to indicate that the item has been updated
+      # concurrently
+
+      if socket.assigns[:dirty],
+        do: Map.put(found_item, :permission_level, 100),
+        else: found_item
+    end)
+  end
+
+  def loader(%{action: :index}) do
+    @items
+  end
+
+  def loader(_), do: nil
+
+  @impl true
+  def fetch_subject(_socket, session) do
+    case session["token"] do
+      "valid_token" -> %User{id: 1, roles: session["roles"] || []}
+      _ -> nil
+    end
+  end
 
   @impl Permit.Phoenix.LiveView
   def handle_unauthorized(_action, socket), do: {:cont, assign(socket, :unauthorized, true)}

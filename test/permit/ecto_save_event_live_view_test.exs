@@ -1,4 +1,4 @@
-defmodule Permit.SaveEventLiveViewTest do
+defmodule Permit.EctoSaveEventLiveViewTest do
   @moduledoc """
   Tests for LiveView handle_event authorization with "save" events that contain
   form payloads instead of IDs. Tests both reload_on_event? behaviors:
