@@ -54,6 +54,8 @@ defmodule Permit.Phoenix.Actions do
       def singular_actions do
         unquote(__MODULE__).singular_actions()
       end
+
+      defoverridable grouping_schema: 0, singular_actions: 0
     end
   end
 

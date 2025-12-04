@@ -137,20 +137,43 @@ defmodule Permit.Phoenix.LiveView do
   ## Event authorization
 
   Actions such as updating or deleting a resource are typically implemented in LiveView using `handle_event/3`.
-  Permit taps into `handle_event/3` processing, loads the resource with Permit.Ecto (or a loader function) based
-  on the event's `"id"` param and a query based on the currently resolved permissions and puts it in `assigns`.
-  If authorization fails, `handle_unauthorized/2` is called.
+  Permit taps into `handle_event/3` processing and, depending on the event's nature:
+  * For events carrying an `"id"` param (e.g. record deletion from an index page), **loads the record** with
+    Permit.Ecto (or a loader function) based on the ID param and a query based on the currently resolved
+    permissions and puts it in `assigns`.
+  * For events that do not carry an `"id"` param (e.g. updating a record with form data), **reloads the
+    record** currently assigned to `@loaded_resource`, using either Permit.Ecto (and the record's ID) or
+    the existing loader function. This is done by default to ensure permissions are evaluated against the
+    latest data. You can disable this behaviour by overriding `reload_on_event?/2` (or by passing the
+    `:reload_on_event?` option) if you prefer to reuse the already assigned record.
 
-  Event to action mapping must be given in the `event_mapping/0` callback. There is no default mapping as
-  event names typically suggested by Phoenix may map to different actions (e.g. Phoenix generates `"save"`
-  for both `:create` and `:update` actions).
+  Event to action mapping is given using the `@permit_action` module attribute put right before an event
+  handler.
+
+      @impl true
+      @permit_action :update
+      def handle_event("save", %{"article" => article_params}, socket) do
+        article = socket.assigns.loaded_resource
+
+        case MyApp.update_article(article_params) do
+          # ...
+        end
+      end
+
+  In this example, the `"save"` event handler is authorized against the `:update` action on `MyApp.Article`.
+
+  Note that there is no default mapping as event names typically suggested by Phoenix may map to different
+  actions (e.g. Phoenix generates `"save"` for both `:create` and `:update` actions).
+
+  When the `handle_event/3` function is not implemented using pattern matching on the first argument,
+  the `event_mapping` callback must be used instead.
 
       @impl true
       # "delete" event maps to :delete Permit action
-      def event_mapping, do: %{"delete" => :delete}
+      def event_mapping, do: %{"delete" => :delete, "remove" => :delete}
 
       @impl true
-      def handle_event("delete", _params, _socket) do
+      def handle_event(event_name, _params, _socket) when event_name in ["delete", "remove"] do
         # Resource is loaded and authorized by Permit
         article = socket.assigns.loaded_resource
 
@@ -161,6 +184,8 @@ defmodule Permit.Phoenix.LiveView do
         # Permit either streams the viewed items or assigns them (see `use_stream?/1` callback)
         {:noreply, stream_delete(socket, :loaded_resources, article)}
       end
+
+  If authorization fails, `handle_unauthorized/2` is called. Handling authorization failure is as simple as:
 
       @impl true
       def handle_unauthorized(:delete, socket) do
@@ -236,6 +261,19 @@ defmodule Permit.Phoenix.LiveView do
   @callback id_struct_field_name(Types.action_group(), PhoenixTypes.socket()) :: atom()
   @callback unauthorized_message(PhoenixTypes.socket(), map()) :: binary()
   @callback event_mapping() :: map()
+  @doc ~S"""
+  For events that do not carry an `"id"` param (e.g. updating a record with form data), determines whether to reload the record before each event authorization.
+
+  Defaults to `true`.
+
+  ## Example
+
+      @impl true
+      def reload_on_event?(_action, _socket) do
+        true
+      end
+  """
+  @callback reload_on_event?(Types.action_group(), PhoenixTypes.socket()) :: boolean()
   @callback use_stream?(PhoenixTypes.socket()) :: boolean()
   @doc ~S"""
   Determines whether to use Phoenix Scopes for fetching the subject. Set to `false` in Phoenix <1.8.
@@ -282,14 +320,21 @@ defmodule Permit.Phoenix.LiveView do
                         handle_not_found: 1,
                         unauthorized_message: 2,
                         use_stream?: 1,
+                        reload_on_event?: 2,
                         use_scope?: 0,
                         scope_subject: 1
                       ]
                       |> Enum.filter(& &1)
 
   defmacro __using__(opts) do
+    # credo:disable-for-next-line
     quote generated: true do
       import unquote(__MODULE__)
+
+      Module.register_attribute(__MODULE__, :permit_action, accumulate: true)
+      Module.register_attribute(__MODULE__, :__event_mapping__, [])
+      @__event_mapping__ %{}
+      @on_definition Permit.Phoenix.Decorators.LiveView
 
       if unquote(@permit_ecto_available?) do
         require Ecto.Query
@@ -299,8 +344,9 @@ defmodule Permit.Phoenix.LiveView do
       @before_compile unquote(__MODULE__)
       @opts unquote(opts)
 
-      @impl true
-      def event_mapping, do: unquote(__MODULE__).event_mapping()
+      # event mapping is defined in the __before_compile__ callback to ensure it is
+      # available to the module before the __before_compile__ callback is executed.
+      @before_compile unquote(__MODULE__)
 
       @impl true
       def handle_unauthorized(action, socket) do
@@ -328,7 +374,7 @@ defmodule Permit.Phoenix.LiveView do
 
       @impl true
       def preload_actions,
-        do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index, :delete]
+        do: (unquote(opts[:preload_actions]) || []) ++ [:show, :edit, :index, :delete, :update]
 
       @impl true
       def fallback_path(action, socket) do
@@ -383,11 +429,22 @@ defmodule Permit.Phoenix.LiveView do
       end
 
       @impl true
+      def reload_on_event?(action, socket) do
+        case unquote(opts[:reload_on_event?]) do
+          fun when is_function(fun) -> fun.(action, socket)
+          value when value in [nil, true] -> true
+          false -> false
+          _ -> raise ":reload_on_event? must be a function or a boolean"
+        end
+      end
+
+      @impl true
       def use_scope? do
         case unquote(opts[:use_scope?]) do
           fun when is_function(fun) -> fun.()
-          nil -> true
-          other -> other
+          value when value in [nil, true] -> true
+          false -> false
+          _ -> raise ":use_scope? must be a function or a boolean"
         end
       end
 
@@ -431,9 +488,9 @@ defmodule Permit.Phoenix.LiveView do
           action_grouping: 0,
           singular_actions: 0,
           use_stream?: 1,
-          event_mapping: 0,
           use_scope?: 0,
-          scope_subject: 1
+          scope_subject: 1,
+          reload_on_event?: 2
         ]
         |> Enum.filter(& &1)
       )
@@ -442,6 +499,22 @@ defmodule Permit.Phoenix.LiveView do
 
   defmacro __before_compile__(_env) do
     quote do
+      if Module.defines?(__MODULE__, {:event_mapping, 0}) do
+        # it appears the developer has defined their own event_mapping/0 function,
+        # so we will disregard the default event mapping, and only merge the developer's
+        # implementation with whatever was defined using @permit_action module attributes.
+        defoverridable event_mapping: 0
+        def event_mapping, do: super() |> Map.merge(@__event_mapping__)
+      else
+        # no event_mapping/0 function defined, so we use the default event mapping + whatever
+        # was defined in the module using @permit_action.
+        @impl true
+        def event_mapping,
+          do: unquote(__MODULE__).default_event_mapping() |> Map.merge(@__event_mapping__)
+
+        defoverridable event_mapping: 0
+      end
+
       if Module.defines?(__MODULE__, {:loader, 1}) do
         def use_loader?, do: true
       else
@@ -482,8 +555,22 @@ defmodule Permit.Phoenix.LiveView do
     RuntimeError -> false
   end
 
-  @doc false
-  def event_mapping do
+  # Default event mapping will not map "save" to any action. It is not unambiguous
+  # whether "save" should be mapped to :create or :update. Since Phoenix generators use "save"
+  # for both create and update actions, it will be up to the developer to clarify the mapping using:
+  #
+  # ```elixir
+  # @permit_action :create
+  # def handle_event("save", params, socket) do
+  #   {:noreply, socket}
+  # end
+  #
+  # @permit_action :update
+  # def handle_event("save", params, socket) do
+  #   {:noreply, socket}
+  # end
+  # ```
+  def default_event_mapping do
     %{
       "create" => :create,
       "delete" => :delete,

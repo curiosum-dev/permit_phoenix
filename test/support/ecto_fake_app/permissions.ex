@@ -12,7 +12,7 @@ defmodule Permit.EctoFakeApp.Permissions do
 
   def can(:owner = _role) do
     permit()
-    |> all(Item, [user, item], owner_id: user.id)
+    |> all(Item, [user, item], owner_id: user.id, thread_name: {:!=, "broken"})
   end
 
   def can(:function_owner = _role) do

@@ -123,22 +123,61 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
 
     socket
     |> attach_hooks(params, session)
-    |> authenticate_and_authorize!(action, session, params)
+    |> authenticate_and_authorize!(action, session, params, :handle_params)
   end
 
-  defp authenticate_and_authorize!(socket, action, session, params) do
+  defp authenticate_and_authorize!(socket, action, session, params, action_origin) do
     socket
-    |> authorize(session, action, params)
+    |> authorize(session, action, params, action_origin)
     |> respond()
   end
 
-  @spec authorize(PhoenixTypes.socket(), PhoenixTypes.session(), Types.action_group(), map()) ::
+  @spec authorize(
+          PhoenixTypes.socket(),
+          PhoenixTypes.session(),
+          Types.action_group(),
+          map(),
+          atom()
+        ) ::
           PhoenixTypes.live_authorization_result()
-  defp authorize(socket, session, action, params) do
-    if action in socket.view.preload_actions() do
-      preload_and_authorize(socket, session, action, params)
+  defp authorize(socket, session, action, params, action_origin) do
+    cond do
+      action in socket.view.singular_actions() and action_origin == :handle_event and
+          not socket.view.reload_on_event?(action, socket) ->
+        authorize_preloaded_resource(socket, session, action)
+
+      action in socket.view.preload_actions() ->
+        preload_and_authorize(socket, session, action, params, action_origin)
+
+      true ->
+        just_authorize(socket, session, action)
+    end
+  end
+
+  defp authorize_preloaded_resource(socket, session, action) do
+    record = socket.assigns[:loaded_resource]
+
+    if !record do
+      raise ~S"""
+      #{socket.view} has the :reload_on_event? option set to false, but in processing
+      an event mapped to the #{action} action, the record was not found preloaded in
+      @loaded_resource.
+
+      It either must be ensured that the record is preloaded in @loaded_resource (e.g.
+      when the LiveView mounts), or the :reload_on_event? option must be set to true.
+      """
+    end
+
+    subject = get_subject(socket, session)
+    authorization_module = socket.view.authorization_module()
+
+    # Check authorization on the action in general, then on the specific record
+    with {:authorized, socket} <- just_authorize(socket, session, action),
+         true <-
+           authorization_module.can(subject) |> authorization_module.do?(action, record) do
+      {:authorized, socket}
     else
-      just_authorize(socket, session, action)
+      _ -> {:unauthorized, socket}
     end
   end
 
@@ -165,10 +204,11 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
           PhoenixTypes.socket(),
           PhoenixTypes.session(),
           Types.action_group(),
-          map()
+          map(),
+          atom()
         ) ::
           PhoenixTypes.live_authorization_result()
-  defp preload_and_authorize(socket, session, action, params) do
+  defp preload_and_authorize(socket, session, action, params, action_origin) do
     view = socket.view
     use_loader? = view.use_loader?()
 
@@ -189,6 +229,18 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         {:loaded_resources, :loaded_resource, &resolver_module.authorize_and_preload_all!/5}
       end
 
+    id_param_name = view.id_param_name(action, socket)
+    id_struct_field_name = view.id_struct_field_name(action, socket)
+
+    params =
+      if action_origin == :handle_event and singular? do
+        Map.put_new_lazy(params, id_param_name, fn ->
+          Map.get(socket.assigns[load_key], id_struct_field_name)
+        end)
+      else
+        params
+      end
+
     case auth_function.(
            subject,
            authorization_module,
@@ -203,6 +255,22 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
              use_loader?: use_loader?
            }
          ) do
+      # In events related to single-record actions like "delete", event params typically
+      # contain the record ID [socket.view.id_param_name(action, socket)].
+      #
+      # In events triggered by a form, params contain only the form's payload and not the
+      # record ID. This usually means that we're in a LiveView like "Edit", in which we load
+      # and assign the record on mount, before the user triggers the event.
+      # In this case, we need to assume that the record is in `assigns[:loaded_resource]`.
+      #
+      # The default behaviour with Permit.Ecto is to reload the record to ensure that another
+      # agent did not change the record concurrently in a way that might affect authorization.
+      #
+      # If `use_loader?` is true (or there is no Permit.Ecto), by default, we will reload the
+      # record using the loader function and it's on the developer to ensure event params and
+      # socket assigns contain everything necessary to load the record.
+      #
+      # The developer can opt out of reloading the record by setting `reload_on_event?` to false.
       {:authorized, records} ->
         {:authorized,
          socket
@@ -263,13 +331,20 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
       # has already been done in the on_mount/4 callback implementation.
       if Permit.Phoenix.LiveView.mounting?(socket),
         do: {:cont, socket},
-        else: authenticate_and_authorize!(socket, socket.assigns.live_action, session, params)
+        else:
+          authenticate_and_authorize!(
+            socket,
+            socket.assigns.live_action,
+            session,
+            params,
+            :handle_params
+          )
     end)
     |> Phoenix.LiveView.attach_hook(:event_authorization, :handle_event, fn event,
                                                                             params,
                                                                             socket ->
       if action = socket.view.event_mapping()[event] do
-        authenticate_and_authorize!(socket, action, session, params)
+        authenticate_and_authorize!(socket, action, session, params, :handle_event)
       else
         {:cont, socket}
       end
