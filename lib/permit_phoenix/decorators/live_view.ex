@@ -2,7 +2,7 @@ defmodule Permit.Phoenix.Decorators.LiveView do
   @moduledoc false
 
   def __on_definition__(env, _kind, :handle_event, args, _guards, _body) do
-    event_name = args |> List.first()
+    event_name = List.first(args)
     attribute_value = Module.get_last_attribute(env.module, :permit_action, nil)
 
     # event_name must be a string - this means the event handler is defined
