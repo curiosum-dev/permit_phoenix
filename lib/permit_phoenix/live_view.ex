@@ -432,8 +432,9 @@ defmodule Permit.Phoenix.LiveView do
       def reload_on_event?(action, socket) do
         case unquote(opts[:reload_on_event?]) do
           fun when is_function(fun) -> fun.(action, socket)
-          nil -> true
-          other -> other
+          value when value in [nil, true] -> true
+          false -> false
+          _ -> raise ":reload_on_event? must be a function or a boolean"
         end
       end
 
@@ -441,8 +442,9 @@ defmodule Permit.Phoenix.LiveView do
       def use_scope? do
         case unquote(opts[:use_scope?]) do
           fun when is_function(fun) -> fun.()
-          nil -> true
-          other -> other
+          value when value in [nil, true] -> true
+          false -> false
+          _ -> raise ":use_scope? must be a function or a boolean"
         end
       end
 
