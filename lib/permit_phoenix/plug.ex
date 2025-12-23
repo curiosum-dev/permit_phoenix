@@ -1,83 +1,5 @@
 defmodule Permit.Phoenix.Plug do
-  @moduledoc """
-  Authorization plug for the web application.
-
-  It automatically infers what CRUD action is represented by the currently executed controller
-  action, and delegates to Permit to determine whether the action is authorized based
-  on current user's role.
-
-  Current user is always fetched from `conn.assigns[:current_user]`, and their role is taken
-  from the module specified in the app's `use Permit` directive. For instance if it's
-  configured as follows:
-
-  ```
-  # Authorization configuration module
-  defmodule MyApp.Authorization do
-    use Permit,
-      repo: Lvauth.Repo,
-      permissions_module: MyApp.Authorization.Permissions
-  end
-
-  # Permissions module - just as an example
-  defmodule MyApp.Authorization.Permissions do
-    use Permit.Permissions
-
-    def can(%{role: :manager} = role) do
-      # A :manager can do all CRUD actions on RouteTemplate, and can do :read on User
-      # if the User has public: true OR the User has :overseer_id equal to current user's
-      # id.
-      permit()
-      |> all(Lvauth.Planning.RouteTemplate)
-      |> read(Lvauth.Accounts.User, public: true)
-      |> read(LvMainFrame.Accounts.User,
-              fn user, other_user -> other_user.overseer_id == user.id end)
-    end
-  end
-  ```
-
-  Then controller can be configured the following way:
-
-  ```
-  defmodule LvauthWeb.Planning.RouteTemplateController do
-    plug Permit.Phoenix.Plug,
-      authorization_module: MyApp.Authorization,
-      loader: fn id -> Lvauth.Repo.get(Customer, id) end,
-      resource_module: Lvauth.Management.Customer,
-      id_param_name: "id",
-      except: [:example],
-      fetch_subject: fn conn -> conn.assigns[:signed_in_user] end
-      handle_unauthorized: fn conn -> redirect(conn, to: "/foo") end
-
-    def show(conn, params) do
-      # 1. If assigns[:current_user] is present, the "id" param will be used to call
-      #    Repo.get(Customer, params["id"]).
-      # 2. can(role) |> read?(record) will be called on the loaded record and each user role.
-      # 3. If authorization succeeds, the record will be stored in assigns[:loaded_resources].
-      # 4. If any of the steps described above fails, the pipeline will be halted.
-    end
-
-    def index(conn, params) do
-      # 1. If assigns[:current_user] is present, can(role) |> read?(Customer) will be called on each role
-      # 2. If authorization succeeds, nothing happens.
-      # 3. If any of the steps described above fails, the pipeline will be halted.
-    end
-
-    def details(conn, params) do
-      # Behaves identically to :show because in :action_crud_mapping it's defined as :read.
-    end
-
-    def clone(conn, params) do
-      # 1. If assigns[:current_user] is present, the "id" param will be used to call
-      #    Repo.get(Customer, params["id"]).
-      # 2. can(role) |> update?(record) will be called on the loaded record (as configured in :action_crud_mapping) and each role of user
-      # 3. If authorization succeeds, the record will be stored in assigns[:loaded_resources].
-      # 4. If any of the steps described above fails, the pipeline will be halted.
-    end
-  end
-  ```
-
-  ##
-  """
+  @moduledoc false
 
   alias Permit.Phoenix.Types, as: PhoenixTypes
   alias Permit.{Resolver, Types}
@@ -91,6 +13,7 @@ defmodule Permit.Phoenix.Plug do
   def call(conn, opts) do
     opts =
       opts
+      |> Keyword.merge(build_opts_from_controller(conn))
       |> Enum.map(fn
         {opt_name, opt_function} when is_function(opt_function, 0) ->
           {opt_name, opt_function.()}
@@ -109,6 +32,52 @@ defmodule Permit.Phoenix.Plug do
       subject = opts[:fetch_subject].(conn)
 
       authorize(conn, opts, action_group, subject, resource_module)
+    end
+  end
+
+  @permit_ecto_available? Permit.Phoenix.Utils.permit_ecto_available?()
+
+  defp build_opts_from_controller(conn) do
+    controller_module = Phoenix.Controller.controller_module(conn)
+
+    # Check if the controller implements Permit.Phoenix.Controller behavior
+    if function_exported?(controller_module, :authorization_module, 0) do
+      # Check if a custom loader is defined by calling the internal function
+      # that the Controller module provides
+      use_loader? =
+        if function_exported?(controller_module, :__permit_loader_defined__?, 0) do
+          controller_module.__permit_loader_defined__?()
+        else
+          false
+        end
+
+      [
+        if(@permit_ecto_available?,
+          do: {:base_query, &controller_module.base_query/1}
+        ),
+        if(@permit_ecto_available?,
+          do: {:finalize_query, &controller_module.finalize_query/2}
+        ),
+        if(@permit_ecto_available?,
+          do: {:use_loader?, use_loader?}
+        ),
+        authorization_module: &controller_module.authorization_module/0,
+        resource_module: &controller_module.resource_module/0,
+        preload_actions: &controller_module.preload_actions/0,
+        fallback_path: &controller_module.fallback_path/2,
+        except: &controller_module.except/0,
+        fetch_subject: &controller_module.fetch_subject/1,
+        handle_unauthorized: &controller_module.handle_unauthorized/2,
+        loader: &controller_module.loader/1,
+        id_param_name: &controller_module.id_param_name/2,
+        id_struct_field_name: &controller_module.id_struct_field_name/2,
+        handle_not_found: &controller_module.handle_not_found/1,
+        unauthorized_message: &controller_module.unauthorized_message/2
+      ]
+      |> Enum.filter(& &1)
+    else
+      raise "Permit.Phoenix.Plug must not be used directly. Use this instead: \n" <>
+              "use Permit.Phoenix.Controller, opts"
     end
   end
 

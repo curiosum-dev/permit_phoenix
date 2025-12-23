@@ -62,6 +62,7 @@ defmodule Permit.Phoenix.MixProject do
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support", "test/support/", "test/permit/support"]
+  defp elixirc_paths(:dev), do: ["lib", "docs.ex"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help deps" to learn about dependencies.
@@ -90,7 +91,14 @@ defmodule Permit.Phoenix.MixProject do
     [
       main: "Permit.Phoenix",
       source_ref: "v#{@version}",
-      source_url: @source_url
+      source_url: @source_url,
+      groups_for_modules: [
+        Controllers: [Permit.Phoenix.Controller, Permit.Phoenix.Plug],
+        LiveView: [Permit.Phoenix.LiveView, Permit.Phoenix.LiveView.AuthorizeHook],
+        "Configuring actions": [Permit.Phoenix.Actions],
+        "Types and errors": [Permit.Phoenix.Types, ~r/.+Error/]
+      ],
+      before_closing_body_tag: &Permit.Phoenix.Docs.before_closing_body_tag/1
     ]
   end
 

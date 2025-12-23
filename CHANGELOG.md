@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `push_navigate(socket, to: socket.view.fallback_path(action, socket))` is done if the LiveView is in the mounting phase,
   - `fallback_path` defaults to the current `_live_referer` path if available, otherwise it is `/`. This means that if using the [link](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#link/1) component with `:navigate` option within the current session, we will still be able to navigate back to the currently displayed page, even though it will go through the mounting phase.
 - Permit dependency bumped to 0.3.1 to fix curiosum-dev/permit#49.
+- Major improvements to documentation and examples. It's now much easier to get started with the library in an existing project.
 
 ## [0.3.1]
 
