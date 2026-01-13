@@ -134,6 +134,9 @@ defmodule Permit.Phoenix.Actions do
   use Permit.Actions
 
   defmacro __using__(opts) do
+    singular_actions_from_router =
+      __MODULE__.singular_actions(Macro.expand(opts[:router], __ENV__))
+
     quote do
       use Permit.Actions
 
@@ -143,7 +146,7 @@ defmodule Permit.Phoenix.Actions do
       end
 
       def singular_actions do
-        unquote(__MODULE__).singular_actions()
+        unquote(singular_actions_from_router)
       end
 
       defoverridable grouping_schema: 0, singular_actions: 0
@@ -167,21 +170,55 @@ defmodule Permit.Phoenix.Actions do
   @doc """
   Returns the list of actions that operate on a single resource.
   """
-  def singular_actions do
-    [:show, :edit, :new, :delete, :update]
+  def singular_actions(router_module) do
+    router_module
+    |> filtered_routes_stream()
+    |> Stream.filter(fn %{path: path, verb: verb} = _route ->
+      # Plug.Router.Utils is private API, subject to change. Hasn't changed in years, though.
+      {param_name_atoms, segments} = Plug.Router.Utils.build_path_match(path)
+
+      last_segment = List.last(segments)
+
+      # Last path part is a param, e.g. `/articles/:id` or `/articles/:name`
+      last_segment_is_param =
+        case last_segment do
+          {_param_name_atom, _, _} -> true
+          _ -> false
+        end
+
+      # Any param clearly looks like an ID, e.g. `:id` or `:uuid`
+      any_param_is_id_like =
+        Enum.any?(param_name_atoms, &(&1 in [:id, :uuid]))
+
+      # Post routes are always singular, while PUT, etc. can be either singular or plural.
+      verb == :post or last_segment_is_param or any_param_is_id_like
+    end)
+    |> Stream.map(fn route -> route.plug_opts end)
+    |> Stream.concat([:show, :edit, :new, :delete, :update, :create])
+    |> Enum.uniq()
   end
 
   def merge_from_router(grouping_schema, router_module) do
-    actions_from_router(router_module)
+    action_names_from_router(router_module)
     |> Enum.reduce(grouping_schema, fn action, acc ->
       if Map.has_key?(acc, action), do: acc, else: Map.put(acc, action, [])
     end)
   end
 
-  def actions_from_router(router_module) do
+  def filtered_routes_stream(router_module) do
     router_module.__routes__()
     |> Stream.filter(&controller_or_live_route?/1)
+  end
+
+  def action_names_from_router(router_module) do
+    filtered_routes_stream(router_module)
     |> Stream.map(fn route -> route.plug_opts end)
+    |> Enum.uniq()
+  end
+
+  def paths_from_router(router_module) do
+    filtered_routes_stream(router_module)
+    |> Stream.map(fn route -> route.path end)
     |> Enum.uniq()
   end
 

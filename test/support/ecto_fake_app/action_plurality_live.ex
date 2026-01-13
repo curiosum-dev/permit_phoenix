@@ -40,6 +40,11 @@ defmodule Permit.EctoFakeApp.ActionPluralityLive do
     end
   end
 
-  @impl true
-  def singular_actions, do: [:view]
+  # To test that the action is considered plural by default, we have commented out the explicit declaration
+  # of the :view action as singular.
+  #
+  # action_plurality_controller.ex implements this callback with an explicit declaration to test it out, too.
+
+  # @impl true
+  # def singular_actions, do: [:view]
 end
