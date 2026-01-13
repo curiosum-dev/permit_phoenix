@@ -62,8 +62,9 @@ defmodule Permit.Phoenix.Actions do
   you can implement the `singular_actions/0` callback. This can be implemented in your actions module
   and overridden in your controller or LiveView module.
 
-  Default singular actions are `:show`, `:edit`, `:new`, `:delete`, `:update`. The `singular_actions/0`
-  callback can be used to add more - it does not require calling `super`.
+  Default singular actions are `:show`, `:edit`, `:new`, `:delete`, `:update` **and** those
+  inferred from the router - see section below. The `singular_actions/0` callback can be used to add more
+  - it does not require calling `super`.
 
   ## Example
 
@@ -97,38 +98,50 @@ defmodule Permit.Phoenix.Actions do
 
   It is recommended to read action names from the router, so that all controller
   action and `:live_action` names are automatically included and convenience functions
-  for them are generated.
+  for them are generated. Moreover, actions are automatically inferred to be singular or plural based on the route definition.
+  An action is singular by default if:
+  - it's one of: `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`, or
+  - it is a POST request, or
+  - it's a route with an `:id` or `:uuid` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
+  - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
-      defmodule MyApp.Router do
-        # ...
+  ```
+  defmodule MyApp.Router do
+    # ...
 
-        get("/items/:id", MyApp.ItemController, :view)
-      end
+    get("/items/:id", MyApp.ItemController, :view)
+  end
 
-      defmodule MyApp.Actions do
-        # Merge the actions from the router into the default grouping schema.
-        use Permit.Phoenix.Actions, router: MyApp.Router
+  defmodule MyApp.Actions do
+    # Merge the actions from the router into the default grouping schema.
+    use Permit.Phoenix.Actions, router: MyApp.Router
 
-        def singular_actions, do: [:view]
-      end
+    # This doesn't need to be used - Permit automatically infers that the :view action is
+    # singular.
+    # You can use it if an explicit declaration is needed, e.g. if you use a different ID
+    # parameter than `:id` or `:uuid`.
+    @impl true
+    def singular_actions, do: [:view]
+  end
 
-      defmodule MyApp.Permissions do
-        # Use the actions module to define permissions.
-        use Permit.Permissions, actions_module: MyApp.Actions
+  defmodule MyApp.Permissions do
+    # Use the actions module to define permissions.
+    use Permit.Permissions, actions_module: MyApp.Actions
 
-        def can(%User{role: :admin} = _user) do
-          permit()
-          |> all(Item)
-        end
+    def can(%User{role: :admin} = _user) do
+      permit()
+      |> all(Item)
+    end
 
-        # The `view` action is automatically added to the grouping schema
-        # and hence available as a `view/2`function when defining permissions.
-        def can(%User{role: :owner} = _user) do
-          permit()
-          |> view(Item)
-          |> all(Item, fn user, item -> item.owner_id == user.id end)
-        end
-      end
+    # The `view` action is automatically added to the grouping schema
+    # and hence available as a `view/2`function when defining permissions.
+    def can(%User{role: :owner} = _user) do
+      permit()
+      |> view(Item)
+      |> all(Item, fn user, item -> item.owner_id == user.id end)
+    end
+  end
+  ```
   """
 
   use Permit.Actions

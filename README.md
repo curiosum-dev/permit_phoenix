@@ -735,10 +735,31 @@ iex> MyApp.Authorization.can(%{id: 1}) |> MyApp.Authorization.index?(%MyApp.Item
 true
 ```
 
+### Action plurality
+
+Actions are either singular (e.g. `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`) or plural (e.g. `:index`)
+- in singular actions, the resource is loaded and authorized as a single record, while in plural actions, the resources
+are loaded and authorized as a collection of records.
+
+By default, an action is considered singular if it's one of: `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`.
+Using the `singular_actions/0` callback, you can override this behaviour and declare additional singular actions.
+
+Overriding is possible either in the actions module, or in the controller or LiveView module itself, which takes precedence.
+
+**Recommended**: use the `:router` option described in the next section, so that all action names are automatically
+included in the actions module, and their plurality is determined based on the route definition.
+
 ### Actions from routes
 
 For convenience, the `:router` option of `use Permit.Phoenix.Actions` allows taking action names from the router
  - it will include all controller action names and defined `:live_action` names for live routes.
+
+ The actions will be automatically inferred to be singular or plural based on the route definition. An action is
+ singular by default if:
+ - it's one of: `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`, or
+ - it is a POST request, or
+ - it's a route with an `:id` or `:uuid` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
+ - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
 ```elixir
 defmodule MyApp.Router do
