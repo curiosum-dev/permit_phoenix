@@ -661,11 +661,13 @@ defmodule Permit.Phoenix.LiveView do
   @callback authorization_module() :: Types.authorization_module()
 
   @doc ~S"""
-  Declares which actions in the controller are to use Permit's automatic preloading and
-  authorization in addition to defaults: `[:show, :edit, :update, :delete, :index]`.
+  Declares which actions in the LiveView should skip automatic record preloading.
 
-  Defaults to `[]`, which means that `[:show, :edit, :update, :delete, :index]` and no
-  other actions will use preloading.
+  By default, all actions preload records automatically. Actions in `skip_preload/0` will
+  only authorize against the resource module, not specific records. This is useful for
+  actions like `:create` and `:new` where there's no existing record to load.
+
+  Defaults to `[:create, :new]`.
 
   Note that the `:update` action is a special case in default LiveView usage, as it is
   typically used to update a record with form data. In this case, the record is not loaded
@@ -674,6 +676,24 @@ defmodule Permit.Phoenix.LiveView do
 
   You can disable this behaviour by overriding `reload_on_event?/2` (or by passing the
   `:reload_on_event?` option) if you prefer to reuse the already assigned record.
+
+  ## Example
+
+      @impl true
+      def skip_preload do
+        [:create, :new, :bulk_action]
+      end
+  """
+  @callback skip_preload() :: list(Types.action_group())
+
+  @doc ~S"""
+  **Deprecated:** Use `c:skip_preload/0` instead.
+
+  Declares which actions in the LiveView are to use Permit's automatic preloading and
+  authorization in addition to defaults: `[:show, :edit, :update, :delete, :index]`.
+
+  This callback is deprecated in favor of `c:skip_preload/0` which inverts the logic - instead of
+  whitelisting actions that preload, you blacklist actions that should skip preloading.
 
   ## Example
 
@@ -988,6 +1008,7 @@ defmodule Permit.Phoenix.LiveView do
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
+                        skip_preload: 0,
                         preload_actions: 0,
                         fallback_path: 2,
                         resource_module: 0,
@@ -1050,6 +1071,11 @@ defmodule Permit.Phoenix.LiveView do
 
       @impl true
       def resource_module, do: unquote(opts[:resource_module])
+
+      @impl true
+      def skip_preload do
+        unquote(__MODULE__).skip_preload(unquote(opts))
+      end
 
       @impl true
       def preload_actions,
@@ -1156,6 +1182,7 @@ defmodule Permit.Phoenix.LiveView do
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
+          skip_preload: 0,
           preload_actions: 0,
           fallback_path: 2,
           resource_module: 0,
@@ -1359,6 +1386,30 @@ defmodule Permit.Phoenix.LiveView do
 
     @doc false
     def finalize_query(query, %{}, _opts), do: query
+  end
+
+  @doc false
+  def skip_preload(opts) do
+    cond do
+      # skip_preload option takes precedence
+      is_list(opts[:skip_preload]) ->
+        opts[:skip_preload]
+
+      # deprecated: if preload_actions is set, emit warning and convert to skip_preload
+      is_list(opts[:preload_actions]) ->
+        IO.warn(
+          "The :preload_actions option is deprecated. Use :skip_preload instead. " <>
+            "Actions not in skip_preload will automatically preload records.",
+          Macro.Env.stacktrace(__ENV__)
+        )
+
+        # Can't reliably convert preload_actions to skip_preload, so we return default
+        [:create, :new]
+
+      # default
+      true ->
+        [:create, :new]
+    end
   end
 
   @doc false

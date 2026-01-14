@@ -6,8 +6,7 @@ defmodule Permit.EctoFakeApp.ActionPluralityLive do
 
   use Permit.Phoenix.LiveView,
     authorization_module: Authorization,
-    resource_module: Item,
-    preload_actions: [:view, :list]
+    resource_module: Item
 
   @impl true
   def render(assigns) do

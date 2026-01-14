@@ -158,9 +158,10 @@ defmodule Permit.Phoenix.Controller do
   2. as configured in your app's `Permit.Phoenix.Actions` implementation.
 
   Default singular actions are `[:show, :edit, :new, :delete, :update]`, any other action
-  is plural by default. Implementing `c:preload_actions/0` allows opting out of preloading
-  records altogether for chosen actions, in which case only the resource name is authorized
-  against.
+  is plural by default. By default, all actions preload records except those in `c:skip_preload/0`
+  (`:create` and `:new` by default, as there's nothing to preload for these actions).
+  Implementing `c:skip_preload/0` allows opting out of preloading records for chosen actions,
+  in which case only the resource name is authorized against.
 
   By default, `Permit.Phoenix.Actions` defines the following convenience shorthands:
   - `:index` and `:show` controller actions are authorized with the `:read` permission,
@@ -363,9 +364,29 @@ defmodule Permit.Phoenix.Controller do
   @callback fetch_subject(PhoenixTypes.conn()) :: Types.subject()
 
   @doc ~S"""
-  Declares which actions in the controller are to use Permit's automatic preloading and authorization.
+  Declares which actions in the controller should skip automatic record preloading.
 
-  `[:show, :edit, :update, :delete, :index]` **always** preload unless they're also in `c:except/0`.
+  By default, all actions preload records automatically. Actions in `skip_preload/0` will
+  only authorize against the resource module, not specific records. This is useful for
+  actions like `:create` and `:new` where there's no existing record to load.
+
+  Defaults to `[:create, :new]`.
+
+  ## Example
+
+      @impl true
+      def skip_preload do
+        [:create, :new, :bulk_action]
+      end
+  """
+  @callback skip_preload() :: list(Types.action_group())
+
+  @doc ~S"""
+  **Deprecated:** Use `c:skip_preload/0` instead.
+
+  Declares which actions in the controller are to use Permit's automatic preloading and authorization.
+  This callback is deprecated in favor of `c:skip_preload/0` which inverts the logic - instead of
+  whitelisting actions that preload, you blacklist actions that should skip preloading.
 
   ## Example
 
@@ -530,6 +551,7 @@ defmodule Permit.Phoenix.Controller do
                           do: {:finalize_query, 2}
                         ),
                         handle_unauthorized: 2,
+                        skip_preload: 0,
                         preload_actions: 0,
                         fallback_path: 2,
                         resource_module: 0,
@@ -574,6 +596,11 @@ defmodule Permit.Phoenix.Controller do
 
       @impl true
       def resource_module, do: unquote(opts[:resource_module])
+
+      @impl true
+      def skip_preload do
+        unquote(__MODULE__).skip_preload(unquote(opts))
+      end
 
       @impl true
       def preload_actions do
@@ -660,6 +687,7 @@ defmodule Permit.Phoenix.Controller do
             do: {:finalize_query, 2}
           ),
           handle_unauthorized: 2,
+          skip_preload: 0,
           preload_actions: 0,
           fallback_path: 2,
           resource_module: 0,
@@ -729,6 +757,31 @@ defmodule Permit.Phoenix.Controller do
   end
 
   @doc false
+  def skip_preload(opts) do
+    cond do
+      # skip_preload option takes precedence
+      is_list(opts[:skip_preload]) ->
+        opts[:skip_preload]
+
+      # deprecated: if preload_actions is set, emit warning and convert to skip_preload
+      is_list(opts[:preload_actions]) ->
+        IO.warn(
+          "The :preload_actions option is deprecated. Use :skip_preload instead. " <>
+            "Actions not in skip_preload will automatically preload records.",
+          Macro.Env.stacktrace(__ENV__)
+        )
+
+        # Can't reliably convert preload_actions to skip_preload, so we return default
+        [:create, :new]
+
+      # default
+      true ->
+        [:create, :new]
+    end
+  end
+
+  @doc false
+  @deprecated "Use skip_preload/1 instead"
   def preload_actions(opts) do
     case opts[:preload_actions] do
       nil -> [:show, :edit, :update, :delete, :index]
