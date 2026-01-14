@@ -10,7 +10,7 @@ defmodule Permit.EctoLiveViewTest.HooksWithCustomOptsLive do
 
   @impl true
   def fallback_path(_action, _socket) do
-    "/?foo"
+    "/live/?foo"
   end
 
   @impl true

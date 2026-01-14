@@ -2,7 +2,7 @@ defmodule Permit.EctoLiveViewTest.EndpointOverridable do
   @moduledoc false
   defmacro __before_compile__(_env) do
     quote do
-      alias Permit.EctoLiveViewTest.LiveRouter
+      alias Permit.EctoFakeApp.Router
 
       @parsers Plug.Parsers.init(
                  parsers: [:urlencoded, :multipart, :json],
@@ -16,7 +16,7 @@ defmodule Permit.EctoLiveViewTest.EndpointOverridable do
         %{conn | secret_key_base: config(:secret_key_base)}
         |> Plug.Parsers.call(@parsers)
         |> Plug.Conn.put_private(:phoenix_endpoint, __MODULE__)
-        |> LiveRouter.call([])
+        |> Router.call([])
       end
     end
   end

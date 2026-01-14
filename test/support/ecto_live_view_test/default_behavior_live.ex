@@ -16,8 +16,8 @@ defmodule Permit.EctoLiveViewTest.DefaultBehaviorLive do
   def render(assigns) do
     ~H"""
     <div>
-      <button id="navigate_show" phx-click="navigate" phx-value-url="/default_items/1">show</button>
-      <button id="navigate_edit" phx-click="navigate" phx-value-url="/default_items/1/edit">edit</button>
+      <button id="navigate_show" phx-click="navigate" phx-value-url="/live/default_items/1">show</button>
+      <button id="navigate_edit" phx-click="navigate" phx-value-url="/live/default_items/1/edit">edit</button>
       <button id="delete" phx-click="delete" phx-value-id="2">delete</button>
       <button id="update" phx-click="update" phx-value-id="2">update</button>
     </div>
