@@ -146,6 +146,8 @@ defmodule Permit.Phoenix.Actions do
 
   use Permit.Actions
 
+  @default_singular_actions [:show, :edit, :new, :delete, :update, :create]
+
   defmacro __using__(opts) do
     singular_actions_from_router =
       __MODULE__.singular_actions(Macro.expand(opts[:router], __ENV__))
@@ -183,6 +185,10 @@ defmodule Permit.Phoenix.Actions do
   @doc """
   Returns the list of actions that operate on a single resource.
   """
+  def singular_actions(router_module)
+
+  def singular_actions(nil), do: @default_singular_actions
+
   def singular_actions(router_module) do
     router_module
     |> filtered_routes_stream()
@@ -207,9 +213,11 @@ defmodule Permit.Phoenix.Actions do
       verb == :post or last_segment_is_param or any_param_is_id_like
     end)
     |> Stream.map(fn route -> route.plug_opts end)
-    |> Stream.concat([:show, :edit, :new, :delete, :update, :create])
+    |> Stream.concat(@default_singular_actions)
     |> Enum.uniq()
   end
+
+  def merge_from_router(grouping_schema, nil), do: grouping_schema
 
   def merge_from_router(grouping_schema, router_module) do
     action_names_from_router(router_module)
