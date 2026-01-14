@@ -102,7 +102,7 @@ defmodule Permit.Phoenix.Actions do
   An action is singular by default if:
   - it's one of: `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`, or
   - it is a POST request, or
-  - it's a route with an `:id` or `:uuid` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
+  - it's a route with an `:id`, `:uuid` or `:slug` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
   - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
   ```
@@ -119,7 +119,7 @@ defmodule Permit.Phoenix.Actions do
     # This doesn't need to be used - Permit automatically infers that the :view action is
     # singular.
     # You can use it if an explicit declaration is needed, e.g. if you use a different ID
-    # parameter than `:id` or `:uuid`.
+    # parameter than `:id`, `:uuid` or `:slug`.
     @impl true
     def singular_actions, do: [:view]
   end
@@ -205,9 +205,9 @@ defmodule Permit.Phoenix.Actions do
           _ -> false
         end
 
-      # Any param clearly looks like an ID, e.g. `:id` or `:uuid`
+      # Any param clearly looks like an ID, e.g. `:id`, `:uuid` or `:slug`
       any_param_is_id_like =
-        Enum.any?(param_name_atoms, &(&1 in [:id, :uuid]))
+        Enum.any?(param_name_atoms, &(&1 in [:id, :uuid, :slug]))
 
       # Post routes are always singular, while PUT, etc. can be either singular or plural.
       verb == :post or last_segment_is_param or any_param_is_id_like

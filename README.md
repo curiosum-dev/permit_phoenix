@@ -758,7 +758,7 @@ For convenience, the `:router` option of `use Permit.Phoenix.Actions` allows tak
  singular by default if:
  - it's one of: `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`, or
  - it is a POST request, or
- - it's a route with an `:id` or `:uuid` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
+ - it's a route with an `:id`, `:uuid` or `:slug` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
  - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
 ```elixir
