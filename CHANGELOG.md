@@ -28,9 +28,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Options can be set using `use` options or callback implementations. You can switch to authorizing against `@current_user`, using a different scope key (or the entire scope) as the subject, or fetch the subject from the session.
   See the README for a full configuration guidance.
-  ```
 
   In Controllers, likewise, you can use the :use_scope? option or callback to enable or disable scope-based subject assignment.
+
+- Infer singular actions based on route path parameters (#47)
+
+  If a route path parameter is an `:id`, `:uuid` or `:slug`, or the last path segment is a parameter, or the route is a POST request, or the action's name is one of the Phoenix standard actions (`:show`, `:edit`, `:new`, `:create`, `:delete`, `:update`), the action is considered singular.
+
+  Example:
+  ```elixir
+  defmodule MyApp.Router do
+    # Plug routes
+    get("/items/:uuid", MyApp.ItemController, :show) # singular
+    post("/items", MyApp.ItemController, :create) # singular
+    get("/items/:id/view", MyApp.ItemController, :show) # singular
+    get("/items/:slug/display", MyApp.ItemController, :open) # singular
+    get("/articles/:id", MyApp.ArticleController, :show) # singular
+
+    get("/items", MyApp.ItemController, :index) # plural
+    get("/items/list", MyApp.ItemController, :list) # plural
+    get("/articles/:article_id/comments", MyApp.CommentController, :index) # plural
+
+    # LiveView routes
+    live_session :require_authenticated_user, on_mount: [
+      {MyAppWeb.UserAuth, :ensure_authenticated},
+      Permit.Phoenix.LiveView.AuthorizeHook
+    ] do
+      live("/items/:id", MyApp.ItemLive, :show) # singular
+      live("/items/:id/edit", MyApp.ItemLive, :edit) # singular
+      live("/items", MyApp.ItemLive, :index) # plural
+      live("/items/list", MyApp.ItemLive, :list) # plural
+    end
+  end
+  ```
+
+  You can still override `singular_actions/0` in the actions module or in a controller/LiveView module.
 
 ### Changed
 
