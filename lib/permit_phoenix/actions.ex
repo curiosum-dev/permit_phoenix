@@ -149,9 +149,6 @@ defmodule Permit.Phoenix.Actions do
   @default_singular_actions [:show, :edit, :new, :delete, :update, :create]
 
   defmacro __using__(opts) do
-    singular_actions_from_router =
-      __MODULE__.singular_actions(Macro.expand(opts[:router], __ENV__))
-
     quote do
       use Permit.Actions
 
@@ -161,7 +158,8 @@ defmodule Permit.Phoenix.Actions do
       end
 
       def singular_actions do
-        unquote(singular_actions_from_router)
+        # Call at runtime to pick up router changes during live reload
+        unquote(__MODULE__).singular_actions(unquote(opts)[:router])
       end
 
       defoverridable grouping_schema: 0, singular_actions: 0
