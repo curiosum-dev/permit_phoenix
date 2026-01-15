@@ -64,6 +64,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   You can still override `singular_actions/0` in the actions module or in a controller/LiveView module.
 
+- [Breaking] Replace `:preload_actions` option with `:skip_preload` in `Permit.Phoenix.LiveView` (#47)
+
+Along with inference of singular actions from routes, as part of the 'sane defaults campaign' in this release, the `:preload_actions` option has been replaced with `:skip_preload` in LiveViews and controllers.
+
+The user was already able to use the `:except` option to exclude actions from using Permit whatsoever on an opt-out basis, while `:preload_actions` was opt-in - so you could authorize an action but not reason about a resource record or records at all.
+
+To reduce confusion, we've inverted the logic: instead of whitelisting actions that preload, you blacklist actions that should skip preloading. It's now easier to understand and configure.
+
+```elixir
+# Defaults to [:create, :new] - you can add more actions to the list to skip preloading for.
+@impl true
+def skip_preload do
+  [:create, :new, :bulk_action]
+end
+```
+
+When adding a new action like `:open`, you now don't have to remember to override `:preload_actions` - it automatically gets to be preloaded.
+
 ### Changed
 
 - [Breaking] Permit.Phoenix.LiveView no longer needs to have the `fetch_subject/2` callback implemented, and its result is no longer assigned to the `:current_user` assign - so that Permit no longer interferes with your assigns. This was a leftover from before `mix phx.gen.auth` became the de facto standard.
