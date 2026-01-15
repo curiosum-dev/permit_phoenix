@@ -35,7 +35,7 @@ defmodule Permit.LiveViewNavigationTest do
       assert {:error, {:live_redirect, redirect_info}} =
                conn
                |> fetch_flash()
-               |> live("/default_items/new")
+               |> live("/live/default_items/new")
 
       assert %{to: _path, flash: %{"error" => error}} = redirect_info
       assert error =~ "permission"
@@ -46,17 +46,17 @@ defmodule Permit.LiveViewNavigationTest do
       assert {:error, {:live_redirect, %{flash: %{"error" => error}}}} =
                conn
                |> fetch_flash()
-               |> live("/default_items/new")
+               |> live("/live/default_items/new")
 
       assert error == "You do not have permission to perform this action."
     end
 
     test "fallback_path returns '/' by default when no _live_referer", %{conn: conn} do
-      # When there's no _live_referer (normal HTTP request), should fall back to "/"
+      # When there's no _live_referer (normal HTTP request), should fall back to "/live/"
       assert {:error, {:live_redirect, %{to: "/"}}} =
                conn
                |> fetch_flash()
-               |> live("/default_items/new")
+               |> live("/live/default_items/new")
     end
   end
 
@@ -66,7 +66,7 @@ defmodule Permit.LiveViewNavigationTest do
     test "does NOT redirect when unauthorized during handle_params", %{conn: conn} do
       # This is the key test for the navigate_if_mounting change
       # Mount at authorized page (/default_items - inspector can view)
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Navigate to unauthorized page (/default_items/1/edit - inspector cannot edit) via handle_params
       # With the new navigate_if_mounting, this should NOT redirect
@@ -78,7 +78,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "LiveView remains alive after unauthorized handle_params navigation", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Try to navigate to edit page (unauthorized for inspector)
       lv |> element("#navigate_edit") |> render_click()
@@ -91,7 +91,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "handles multiple unauthorized navigations without redirecting", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Multiple unauthorized navigations via handle_params should all work without redirect
       lv |> element("#navigate_edit") |> render_click()
@@ -110,7 +110,7 @@ defmodule Permit.LiveViewNavigationTest do
 
     test "does not interfere with authorized mount", %{conn: conn} do
       # Admin can create items, verify navigate_if_mounting doesn't break authorized flows
-      {:ok, lv, _html} = live(conn, "/default_items/new")
+      {:ok, lv, _html} = live(conn, "/live/default_items/new")
 
       assigns = get_assigns(lv, DefaultBehaviorLive)
 
@@ -120,7 +120,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "does not interfere with authorized handle_params navigation", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Navigate to edit (authorized for admin)
       lv |> element("#navigate_edit") |> render_click()
@@ -134,7 +134,7 @@ defmodule Permit.LiveViewNavigationTest do
 
     test "authorized mount does not trigger navigation", %{conn: conn} do
       # Verify no unexpected redirects for authorized users
-      result = conn |> fetch_flash() |> live("/default_items/new")
+      result = conn |> fetch_flash() |> live("/live/default_items/new")
 
       assert {:ok, _lv, _html} = result
       refute match?({:error, {:live_redirect, _}}, result)
@@ -145,15 +145,15 @@ defmodule Permit.LiveViewNavigationTest do
     setup [:inspector_role, :init_session]
 
     test "custom fallback_path function takes precedence over default behavior", %{conn: conn} do
-      # HooksWithCustomOptsLive has custom fallback_path that returns "/?foo"
+      # HooksWithCustomOptsLive has custom fallback_path that returns "/live/?foo"
       # This should override the default _live_referer logic
       assert {:error, {:live_redirect, %{to: to, flash: %{"error" => error}}}} =
                conn
                |> fetch_flash()
-               |> live("/items_custom/2/edit")
+               |> live("/live/items_custom/2/edit")
 
       # Should use custom path
-      assert to == "/?foo"
+      assert to == "/live/?foo"
 
       # Should use custom unauthorized message
       assert error == "Lorem ipsum."
@@ -169,7 +169,7 @@ defmodule Permit.LiveViewNavigationTest do
       assert {:error, {:live_redirect, _}} =
                conn
                |> fetch_flash()
-               |> live("/default_items/new")
+               |> live("/live/default_items/new")
     end
 
     test "mounting? returns false during handle_params - no redirect when unauthorized", %{
@@ -177,7 +177,7 @@ defmodule Permit.LiveViewNavigationTest do
     } do
       # This implicitly tests that mounting? returns false during handle_params
       # Because navigate_if_mounting returns socket unchanged, so no redirect
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Navigate via handle_params - should not redirect
       lv |> element("#navigate_edit") |> render_click()
@@ -196,13 +196,13 @@ defmodule Permit.LiveViewNavigationTest do
       assert {:error, {:live_redirect, %{to: "/"}}} =
                conn
                |> fetch_flash()
-               |> live("/default_items/new")
+               |> live("/live/default_items/new")
     end
 
     test "fallback_path handles RuntimeError gracefully", %{conn: conn} do
       # During handle_params (not mounting), get_connect_params raises RuntimeError
-      # The fallback_path function rescues this and falls back to "/"
-      {:ok, lv, _html} = live(conn, "/default_items")
+      # The fallback_path function rescues this and falls back to "/live/"
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Navigate to trigger unauthorized during handle_params
       # The fallback_path will be called but get_connect_params will raise RuntimeError
@@ -219,7 +219,7 @@ defmodule Permit.LiveViewNavigationTest do
     test "does NOT redirect when unauthorized during handle_event", %{conn: conn} do
       # This is a critical test for the navigate_if_mounting change
       # Mount at authorized page (/default_items - inspector can view)
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Trigger an unauthorized event (delete - inspector cannot delete)
       # With navigate_if_mounting, this should NOT redirect
@@ -233,7 +233,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "LiveView remains responsive after multiple unauthorized events", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Try multiple unauthorized events
       lv |> element("#delete") |> render_click()
@@ -250,7 +250,7 @@ defmodule Permit.LiveViewNavigationTest do
 
     test "handle_event authorization with default handle_unauthorized", %{conn: conn} do
       # Inspector can view items but cannot delete
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Before triggering unauthorized event
       assert Process.alive?(lv.pid)
@@ -269,7 +269,7 @@ defmodule Permit.LiveViewNavigationTest do
 
     test "authorized handle_event works normally", %{conn: conn} do
       # Admin can delete items
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Trigger delete (authorized for admin)
       lv |> element("#delete") |> render_click()
@@ -279,7 +279,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "multiple authorized events work correctly", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/default_items")
+      {:ok, lv, _html} = live(conn, "/live/default_items")
 
       # Multiple authorized events should all work
       lv |> element("#delete") |> render_click()
@@ -296,7 +296,7 @@ defmodule Permit.LiveViewNavigationTest do
     test "custom handle_unauthorized is not affected by navigate_if_mounting", %{conn: conn} do
       # HooksLive overrides handle_unauthorized to just set an assign
       # Verify that navigate_if_mounting doesn't break custom implementations
-      {:ok, lv, _html} = live(conn, "/items/new")
+      {:ok, lv, _html} = live(conn, "/live/items/new")
 
       assigns = get_assigns(lv, HooksLive)
 
@@ -306,7 +306,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "custom handle_unauthorized works during handle_params", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/live/items")
 
       lv |> element("#navigate_edit") |> render_click()
 
@@ -320,7 +320,7 @@ defmodule Permit.LiveViewNavigationTest do
     end
 
     test "custom handle_unauthorized works during handle_event", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/items")
+      {:ok, lv, _html} = live(conn, "/live/items")
 
       # Trigger unauthorized delete event
       lv |> element("#delete") |> render_click()

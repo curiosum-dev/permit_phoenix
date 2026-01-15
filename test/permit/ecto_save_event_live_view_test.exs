@@ -26,7 +26,7 @@ defmodule Permit.EctoSaveEventLiveViewTest do
 
     test "can save owned item - reloads resource and authorizes", %{conn: conn} do
       # Navigate to edit page for item 1 (owned by user 1)
-      {:ok, lv, _html} = live(conn, "/save_event_items/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/save_event_items/1/edit")
 
       # Verify the resource was loaded on mount
       assigns = get_assigns(lv, SaveEventLive)
@@ -52,7 +52,7 @@ defmodule Permit.EctoSaveEventLiveViewTest do
 
     test "reloads resource on each save event", %{conn: conn} do
       # Navigate to edit page for item 1
-      {:ok, lv, _html} = live(conn, "/save_event_items/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/save_event_items/1/edit")
 
       # Get initial loaded resource
       initial_assigns = get_assigns(lv, SaveEventLive)
@@ -80,7 +80,7 @@ defmodule Permit.EctoSaveEventLiveViewTest do
 
     test "can save owned item - uses preloaded resource without reload", %{conn: conn} do
       # Navigate to edit page for item 1 (owned by user 1)
-      {:ok, lv, _html} = live(conn, "/save_event_no_reload_items/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/save_event_no_reload_items/1/edit")
 
       # Verify the resource was loaded on mount
       assigns = get_assigns(lv, SaveEventNoReloadLive)
@@ -113,7 +113,7 @@ defmodule Permit.EctoSaveEventLiveViewTest do
            conn: conn
          } do
       # Moderator level 1 can edit items with permission_level <= 1
-      {:ok, lv, _html} = live(conn, "/save_event_items/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/save_event_items/1/edit")
 
       assigns = get_assigns(lv, SaveEventLive)
       assert %{loaded_resource: %Item{id: 1, permission_level: 1}} = assigns
@@ -137,7 +137,7 @@ defmodule Permit.EctoSaveEventLiveViewTest do
            conn: conn
          } do
       # Moderator level 1 can edit items with permission_level <= 1
-      {:ok, lv, _html} = live(conn, "/save_event_no_reload_items/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/save_event_no_reload_items/1/edit")
 
       assigns = get_assigns(lv, SaveEventNoReloadLive)
       assert %{loaded_resource: %Item{id: 1, permission_level: 1}} = assigns

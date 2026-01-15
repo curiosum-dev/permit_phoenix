@@ -105,7 +105,7 @@ defmodule Permit.EctoPlugWithLoaderTest do
       assert %Item{id: 1} = conn.assigns[:loaded_resource]
     end
 
-    test "authorizes :details action and preloads resource via :action_crud_mapping and :preload_actions options",
+    test "authorizes :details action and preloads resource via :action_crud_mapping",
          %{conn: conn} do
       conn = call(conn, :get, "/account/1")
       assert conn.resp_body =~ ~r[Item]
@@ -144,7 +144,7 @@ defmodule Permit.EctoPlugWithLoaderTest do
       assert %Item{id: 1} = conn.assigns[:loaded_resource]
     end
 
-    test "authorizes :details action on item 1 and preloads resource via :action_crud_mapping and :preload_actions options",
+    test "authorizes :details action on item 1 and preloads resource via :action_crud_mapping",
          %{conn: conn} do
       conn = call(conn, :get, "/account/1")
       assert conn.resp_body =~ ~r[Item]
@@ -195,7 +195,7 @@ defmodule Permit.EctoPlugWithLoaderTest do
       assert conn.resp_body =~ ~r[Item]
     end
 
-    test "authorizes :details action on item 2 and preloads resource via :action_crud_mapping and :preload_actions options",
+    test "authorizes :details action on item 2 and preloads resource via :action_crud_mapping",
          %{conn: conn} do
       conn = call(conn, :get, "/account/2")
       assert conn.resp_body =~ ~r[Item]

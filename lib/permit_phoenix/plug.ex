@@ -63,7 +63,7 @@ defmodule Permit.Phoenix.Plug do
         ),
         authorization_module: &controller_module.authorization_module/0,
         resource_module: &controller_module.resource_module/0,
-        preload_actions: &controller_module.preload_actions/0,
+        skip_preload: &controller_module.skip_preload/0,
         fallback_path: &controller_module.fallback_path/2,
         except: &controller_module.except/0,
         fetch_subject: &controller_module.fetch_subject/1,
@@ -95,10 +95,10 @@ defmodule Permit.Phoenix.Plug do
   end
 
   defp authorize(conn, opts, action_group, subject, resource_module) do
-    if action_group in opts[:preload_actions] do
-      authorize_and_preload_resource(conn, opts, action_group, subject, resource_module)
-    else
+    if action_group in opts[:skip_preload] do
       just_authorize(conn, opts, action_group, subject, resource_module)
+    else
+      authorize_and_preload_resource(conn, opts, action_group, subject, resource_module)
     end
   end
 

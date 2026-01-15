@@ -62,8 +62,9 @@ defmodule Permit.Phoenix.Actions do
   you can implement the `singular_actions/0` callback. This can be implemented in your actions module
   and overridden in your controller or LiveView module.
 
-  Default singular actions are `:show`, `:edit`, `:new`, `:delete`, `:update`. The `singular_actions/0`
-  callback can be used to add more - it does not require calling `super`.
+  Default singular actions are `:show`, `:edit`, `:new`, `:delete`, `:update` **and** those
+  inferred from the router - see section below. The `singular_actions/0` callback can be used to add more
+  - it does not require calling `super`.
 
   ## Example
 
@@ -97,41 +98,55 @@ defmodule Permit.Phoenix.Actions do
 
   It is recommended to read action names from the router, so that all controller
   action and `:live_action` names are automatically included and convenience functions
-  for them are generated.
+  for them are generated. Moreover, actions are automatically inferred to be singular or plural based on the route definition.
+  An action is singular by default if:
+  - it's one of: `:show`, `:edit`, `:new`, `:delete`, `:update`, `:create`, or
+  - it is a POST request, or
+  - it's a route with an `:id`, `:uuid` or `:slug` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
+  - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
-      defmodule MyApp.Router do
-        # ...
+  ```
+  defmodule MyApp.Router do
+    # ...
 
-        get("/items/:id", MyApp.ItemController, :view)
-      end
+    get("/items/:id", MyApp.ItemController, :view)
+  end
 
-      defmodule MyApp.Actions do
-        # Merge the actions from the router into the default grouping schema.
-        use Permit.Phoenix.Actions, router: MyApp.Router
+  defmodule MyApp.Actions do
+    # Merge the actions from the router into the default grouping schema.
+    use Permit.Phoenix.Actions, router: MyApp.Router
 
-        def singular_actions, do: [:view]
-      end
+    # This doesn't need to be used - Permit automatically infers that the :view action is
+    # singular.
+    # You can use it if an explicit declaration is needed, e.g. if you use a different ID
+    # parameter than `:id`, `:uuid` or `:slug`.
+    @impl true
+    def singular_actions, do: [:view]
+  end
 
-      defmodule MyApp.Permissions do
-        # Use the actions module to define permissions.
-        use Permit.Permissions, actions_module: MyApp.Actions
+  defmodule MyApp.Permissions do
+    # Use the actions module to define permissions.
+    use Permit.Permissions, actions_module: MyApp.Actions
 
-        def can(%User{role: :admin} = _user) do
-          permit()
-          |> all(Item)
-        end
+    def can(%User{role: :admin} = _user) do
+      permit()
+      |> all(Item)
+    end
 
-        # The `view` action is automatically added to the grouping schema
-        # and hence available as a `view/2`function when defining permissions.
-        def can(%User{role: :owner} = _user) do
-          permit()
-          |> view(Item)
-          |> all(Item, fn user, item -> item.owner_id == user.id end)
-        end
-      end
+    # The `view` action is automatically added to the grouping schema
+    # and hence available as a `view/2`function when defining permissions.
+    def can(%User{role: :owner} = _user) do
+      permit()
+      |> view(Item)
+      |> all(Item, fn user, item -> item.owner_id == user.id end)
+    end
+  end
+  ```
   """
 
   use Permit.Actions
+
+  @default_singular_actions [:show, :edit, :new, :delete, :update, :create]
 
   defmacro __using__(opts) do
     quote do
@@ -143,7 +158,8 @@ defmodule Permit.Phoenix.Actions do
       end
 
       def singular_actions do
-        unquote(__MODULE__).singular_actions()
+        # Call at runtime to pick up router changes during live reload
+        unquote(__MODULE__).singular_actions(unquote(opts)[:router])
       end
 
       defoverridable grouping_schema: 0, singular_actions: 0
@@ -167,21 +183,61 @@ defmodule Permit.Phoenix.Actions do
   @doc """
   Returns the list of actions that operate on a single resource.
   """
-  def singular_actions do
-    [:show, :edit, :new, :delete, :update]
+  def singular_actions(router_module)
+
+  def singular_actions(nil), do: @default_singular_actions
+
+  def singular_actions(router_module) do
+    router_module
+    |> filtered_routes_stream()
+    |> Stream.filter(fn %{path: path, verb: verb} = _route ->
+      # Plug.Router.Utils is private API, subject to change. Hasn't changed in years, though.
+      {param_name_atoms, segments} = Plug.Router.Utils.build_path_match(path)
+
+      last_segment = List.last(segments)
+
+      # Last path part is a param, e.g. `/articles/:id` or `/articles/:name`
+      last_segment_is_param =
+        case last_segment do
+          {_param_name_atom, _, _} -> true
+          _ -> false
+        end
+
+      # Any param clearly looks like an ID, e.g. `:id`, `:uuid` or `:slug`
+      any_param_is_id_like =
+        Enum.any?(param_name_atoms, &(&1 in [:id, :uuid, :slug]))
+
+      # Post routes are always singular, while PUT, etc. can be either singular or plural.
+      verb == :post or last_segment_is_param or any_param_is_id_like
+    end)
+    |> Stream.map(fn route -> route.plug_opts end)
+    |> Stream.concat(@default_singular_actions)
+    |> Enum.uniq()
   end
 
+  def merge_from_router(grouping_schema, nil), do: grouping_schema
+
   def merge_from_router(grouping_schema, router_module) do
-    actions_from_router(router_module)
+    action_names_from_router(router_module)
     |> Enum.reduce(grouping_schema, fn action, acc ->
       if Map.has_key?(acc, action), do: acc, else: Map.put(acc, action, [])
     end)
   end
 
-  def actions_from_router(router_module) do
+  def filtered_routes_stream(router_module) do
     router_module.__routes__()
     |> Stream.filter(&controller_or_live_route?/1)
+  end
+
+  def action_names_from_router(router_module) do
+    filtered_routes_stream(router_module)
     |> Stream.map(fn route -> route.plug_opts end)
+    |> Enum.uniq()
+  end
+
+  def paths_from_router(router_module) do
+    filtered_routes_stream(router_module)
+    |> Stream.map(fn route -> route.path end)
     |> Enum.uniq()
   end
 

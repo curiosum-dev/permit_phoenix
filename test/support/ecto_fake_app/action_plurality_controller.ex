@@ -6,8 +6,7 @@ defmodule Permit.EctoFakeApp.ActionPluralityController do
 
   use Permit.Phoenix.Controller,
     authorization_module: Authorization,
-    resource_module: Item,
-    preload_actions: [:view, :list]
+    resource_module: Item
 
   def list(conn, _params), do: text(conn, "listing all items")
   def view(conn, _params), do: text(conn, inspect(conn.assigns[:loaded_resource]))

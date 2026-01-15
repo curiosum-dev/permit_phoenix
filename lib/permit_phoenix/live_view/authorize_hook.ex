@@ -92,11 +92,11 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
           not socket.view.reload_on_event?(action, socket) ->
         authorize_preloaded_resource(socket, session, action)
 
-      action in socket.view.preload_actions() ->
-        preload_and_authorize(socket, session, action, params, action_origin)
+      action in socket.view.skip_preload() ->
+        just_authorize(socket, session, action)
 
       true ->
-        just_authorize(socket, session, action)
+        preload_and_authorize(socket, session, action, params, action_origin)
     end
   end
 

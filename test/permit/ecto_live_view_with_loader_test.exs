@@ -20,7 +20,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:admin_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assigns = get_assigns(lv)
 
@@ -29,7 +29,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :edit on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -38,7 +38,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :show", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -47,7 +47,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/new")
+      {:ok, lv, _html} = live(conn, "/live/books/new")
 
       assigns = get_assigns(lv)
 
@@ -57,7 +57,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "should assign flash error", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/100")
+      {:ok, lv, _html} = live(conn, "/live/books/100")
 
       assigns = get_assigns(lv)
       assert assigns.flash["error"] == "Record not found"
@@ -68,7 +68,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:owner_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assigns = get_assigns(lv)
 
@@ -77,7 +77,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :show on owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -86,7 +86,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cannot do :show on non-owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -95,7 +95,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :edit on owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -104,7 +104,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cannot do :edit on non-owned item", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -114,7 +114,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/new")
+      {:ok, lv, _html} = live(conn, "/live/books/new")
 
       assigns = get_assigns(lv)
 
@@ -128,7 +128,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:inspector_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assigns = get_assigns(lv)
 
@@ -137,7 +137,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cannot do :edit", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -147,7 +147,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :show", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -156,7 +156,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cannot do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/new")
+      {:ok, lv, _html} = live(conn, "/live/books/new")
 
       assigns = get_assigns(lv)
 
@@ -169,7 +169,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:moderator_1_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assigns = get_assigns(lv)
 
@@ -178,7 +178,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :edit on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -187,7 +187,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :show on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -196,7 +196,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :edit on item 2", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -206,7 +206,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2")
+      {:ok, lv, _html} = live(conn, "/live/books/2")
 
       assigns = get_assigns(lv)
 
@@ -216,7 +216,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/3/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/3/edit")
 
       assigns = get_assigns(lv)
 
@@ -226,7 +226,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/3")
+      {:ok, lv, _html} = live(conn, "/live/books/3")
 
       assigns = get_assigns(lv)
 
@@ -236,7 +236,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/new")
+      {:ok, lv, _html} = live(conn, "/live/books/new")
 
       assigns = get_assigns(lv)
 
@@ -251,7 +251,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:moderator_2_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assigns = get_assigns(lv)
 
@@ -260,7 +260,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :edit on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -269,7 +269,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :show on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -278,7 +278,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :edit on item 2", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -287,7 +287,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2")
+      {:ok, lv, _html} = live(conn, "/live/books/2")
 
       assigns = get_assigns(lv)
 
@@ -296,7 +296,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/3/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/3/edit")
 
       assigns = get_assigns(lv)
 
@@ -306,7 +306,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/3")
+      {:ok, lv, _html} = live(conn, "/live/books/3")
 
       assigns = get_assigns(lv)
 
@@ -316,7 +316,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/new")
+      {:ok, lv, _html} = live(conn, "/live/books/new")
 
       assigns = get_assigns(lv)
 
@@ -331,7 +331,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:dmt_thread_moderator_role, :init_session]
 
     test "can do :index on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assigns = get_assigns(lv)
 
@@ -340,7 +340,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :edit on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/1/edit")
 
       assigns = get_assigns(lv)
 
@@ -350,7 +350,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 1", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/1")
+      {:ok, lv, _html} = live(conn, "/live/books/1")
 
       assigns = get_assigns(lv)
 
@@ -360,7 +360,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :edit on item 2", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/2/edit")
 
       assigns = get_assigns(lv)
 
@@ -369,7 +369,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 2 ", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/2")
+      {:ok, lv, _html} = live(conn, "/live/books/2")
 
       assigns = get_assigns(lv)
 
@@ -378,7 +378,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :edit on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/3/edit")
+      {:ok, lv, _html} = live(conn, "/live/books/3/edit")
 
       assigns = get_assigns(lv)
 
@@ -388,7 +388,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "cant do :show on item 3", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/3")
+      {:ok, lv, _html} = live(conn, "/live/books/3")
 
       assigns = get_assigns(lv)
 
@@ -398,7 +398,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "can do :new on items", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books/new")
+      {:ok, lv, _html} = live(conn, "/live/books/new")
 
       assigns = get_assigns(lv)
 
@@ -413,7 +413,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     setup [:inspector_role, :init_session]
 
     test "is successful, authorizes and preloads resource", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       assert (lv |> get_assigns())[:loaded_resources]
       refute (lv |> get_assigns())[:loaded_resource]
@@ -425,7 +425,7 @@ defmodule Permit.EctoLiveViewWithLoaderTest do
     end
 
     test "delegates to unauthorized handler when unauthorized", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, "/books")
+      {:ok, lv, _html} = live(conn, "/live/books")
 
       lv |> element("#navigate_edit") |> render_click()
 

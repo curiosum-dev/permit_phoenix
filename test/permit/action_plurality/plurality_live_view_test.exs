@@ -24,14 +24,14 @@ defmodule Permit.ActionPlurality.PluralityLiveViewTest do
     end
 
     test "can list items (plural action)", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, "/live_action_plurality")
+      {:ok, _lv, html} = live(conn, "/live/live_action_plurality")
 
       # Verify rendering of list view
       assert html =~ "Listing all items"
     end
 
     test "can view an item (singular action)", %{conn: conn, items: [item | _]} do
-      {:ok, _lv, html} = live(conn, "/live_action_plurality/1")
+      {:ok, _lv, html} = live(conn, "/live/live_action_plurality/1")
 
       # Verify rendering of view
       assert html =~ "Viewing item:"
@@ -49,14 +49,14 @@ defmodule Permit.ActionPlurality.PluralityLiveViewTest do
     end
 
     test "can list items (plural action)", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, "/live_action_plurality")
+      {:ok, _lv, html} = live(conn, "/live/live_action_plurality")
 
       # Verify rendering of list view
       assert html =~ "Listing all items"
     end
 
     test "can view owned item (singular action)", %{conn: conn, items: [item | _]} do
-      {:ok, _lv, html} = live(conn, "/live_action_plurality/1")
+      {:ok, _lv, html} = live(conn, "/live/live_action_plurality/1")
 
       # Verify rendering of view
       assert html =~ "Viewing item:"

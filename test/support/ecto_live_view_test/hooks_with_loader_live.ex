@@ -37,8 +37,8 @@ defmodule Permit.EctoLiveViewTest.HooksWithLoaderLive do
   @spec render(any) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
-    <button id="navigate_show" phx-click="navigate" phx-value-url="/books/1">show</button>
-    <button id="navigate_edit" phx-click="navigate" phx-value-url="/books/1/edit">edit</button>
+    <button id="navigate_show" phx-click="navigate" phx-value-url="/live/books/1">show</button>
+    <button id="navigate_edit" phx-click="navigate" phx-value-url="/live/books/1/edit">edit</button>
     """
   end
 

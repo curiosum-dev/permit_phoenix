@@ -7,7 +7,6 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepoWithCustomOpts do
   use Permit.Phoenix.Controller,
     authorization_module: Authorization,
     resource_module: Item,
-    preload_actions: [:show],
     except: [:action_without_authorizing]
 
   def index(conn, _params), do: text(conn, "listing all items")
