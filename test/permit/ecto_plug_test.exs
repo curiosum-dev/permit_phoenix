@@ -258,6 +258,112 @@ defmodule Permit.EctoPlugTest do
     end
   end
 
+  describe "authorize_with_transaction" do
+    test "admin creates any item", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:admin]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "item" => %{"owner_id" => "2", "permission_level" => "7"}
+        })
+
+      assert conn.resp_body =~ "created item"
+      assert Repo.get_by(Item, owner_id: 2, permission_level: 7)
+    end
+
+    test "creator creates item with matching owner_id", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:creator]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "item" => %{"owner_id" => "1", "permission_level" => "5"}
+        })
+
+      assert conn.resp_body =~ "created item"
+      assert Repo.get_by(Item, owner_id: 1, permission_level: 5)
+    end
+
+    test "creator creates item with wrong owner_id, unauthorized, rolled back", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:creator]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "item" => %{"owner_id" => "2", "permission_level" => "5"}
+        })
+
+      assert_unauthorized(conn, "/?foo")
+      assert conn.halted
+      refute Repo.get_by(Item, owner_id: 2, permission_level: 5)
+    end
+
+    test "validation error passes through", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:admin]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "item" => %{"permission_level" => "not_a_number"}
+        })
+
+      assert conn.resp_body =~ "validation error"
+    end
+
+    test "creator denied when action is overridden to update", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:creator]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "_authorize_as" => "update",
+          "item" => %{"owner_id" => "1", "permission_level" => "9"}
+        })
+
+      assert_unauthorized(conn, "/?foo")
+      assert conn.halted
+      refute Repo.get_by(Item, owner_id: 1, permission_level: 9)
+    end
+
+    test "owner succeeds when action is overridden to update with matching owner_id", %{
+      items: _items
+    } do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:owner]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "_authorize_as" => "update",
+          "item" => %{"owner_id" => "1", "permission_level" => "9"}
+        })
+
+      assert conn.resp_body =~ "created item"
+      assert Repo.get_by(Item, owner_id: 1, permission_level: 9)
+    end
+
+    test "owner denied when action is overridden to update with wrong owner_id", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:owner]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "_authorize_as" => "update",
+          "item" => %{"owner_id" => "2", "permission_level" => "9"}
+        })
+
+      assert_unauthorized(conn, "/?foo")
+      assert conn.halted
+      refute Repo.get_by(Item, owner_id: 2, permission_level: 9)
+    end
+
+    test "admin succeeds when action is overridden to update", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:admin]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "_authorize_as" => "update",
+          "item" => %{"owner_id" => "2", "permission_level" => "9"}
+        })
+
+      assert conn.resp_body =~ "created item"
+      assert Repo.get_by(Item, owner_id: 2, permission_level: 9)
+    end
+  end
+
   defp assert_unauthorized(
          conn,
          fallback_path,

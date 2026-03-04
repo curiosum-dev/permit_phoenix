@@ -16,6 +16,12 @@ Application.put_env(
 
 {:ok, _pid} = Permit.EctoFakeApp.Repo.start_link()
 
+# Advance item IDs past explicitly seeded values to avoid PK collisions
+# when tests insert rows without explicit IDs.
+Permit.EctoFakeApp.Repo.query!(
+  "SELECT setval(pg_get_serial_sequence('items', 'id'), GREATEST((SELECT COALESCE(MAX(id), 0) FROM items), 10000))"
+)
+
 # Code.require_file("ecto_migration.exs", __DIR__)
 
 # :ok = Ecto.Migrator.up(Permit.NonEctoFakeApp.Repo, 0, Ecto.Integration.Migration, log: false)
