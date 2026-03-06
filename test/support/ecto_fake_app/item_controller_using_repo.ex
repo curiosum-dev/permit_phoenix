@@ -20,14 +20,26 @@ defmodule Permit.EctoFakeApp.ItemControllerUsingRepo do
         _ -> []
       end
 
+    auth_opts =
+      if params["_custom_unauthorized"] do
+        Keyword.put(auth_opts, :on_unauthorized, fn _action, conn ->
+          conn
+          |> put_flash(:error, "Custom denied.")
+          |> redirect(to: "/custom_denied")
+          |> halt()
+        end)
+      else
+        auth_opts
+      end
+
     case authorize_with_transaction(
            conn,
            fn -> Repo.insert(Item.changeset(%Item{}, item_params)) end,
            auth_opts
          ) do
       {:ok, item} -> text(conn, "created item #{item.id}")
-      {:error, _changeset} -> text(conn, "validation error")
-      {:unauthorized, conn} -> conn
+      {:error, %Ecto.Changeset{}} -> text(conn, "validation error")
+      {:error, conn} -> conn
     end
   end
 

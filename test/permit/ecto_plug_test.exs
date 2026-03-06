@@ -362,6 +362,26 @@ defmodule Permit.EctoPlugTest do
       assert conn.resp_body =~ "created item"
       assert Repo.get_by(Item, owner_id: 2, permission_level: 9)
     end
+
+    test "on_unauthorized option overrides default handler", %{items: _items} do
+      conn = create_conn(Router, :post, "/sign_in", %{id: 1, roles: [:creator]})
+
+      conn =
+        call(conn, :post, "/items", %{
+          "_custom_unauthorized" => "true",
+          "item" => %{"owner_id" => "2", "permission_level" => "5"}
+        })
+
+      assert conn.halted
+
+      actual_msg =
+        get_in(conn.private, [:phoenix_flash, "error"]) ||
+          get_in(conn.assigns, [:flash, "error"])
+
+      assert actual_msg == "Custom denied."
+      assert Map.new(conn.resp_headers)["location"] == "/custom_denied"
+      refute Repo.get_by(Item, owner_id: 2, permission_level: 5)
+    end
   end
 
   defp assert_unauthorized(

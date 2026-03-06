@@ -347,31 +347,42 @@ defmodule Permit.Phoenix.Controller do
             Repo.insert(Article.changeset(%Article{}, params))
           end) do
             {:ok, article} -> redirect(conn, to: ~p"/articles/#{article}")
-            {:error, changeset} -> render(conn, :new, changeset: changeset)
-            {:unauthorized, conn} -> conn
+            {:error, %Ecto.Changeset{} = changeset} -> render(conn, :new, changeset: changeset)
+            {:error, conn} -> conn
           end
         end
 
     ## Options
 
       * `:action` - override the action name (defaults to `Phoenix.Controller.action_name(conn)`)
+      * `:on_unauthorized` - custom unauthorized handler function `(action, conn -> conn)`.
+        Called instead of `c:handle_unauthorized/2` when the created record fails authorization.
+        Must halt the conn.
 
     ## Return values
 
       * `{:ok, record}` - the callback returned `{:ok, record}` and authorization passed
-      * `{:error, changeset}` - the callback returned `{:error, changeset}` (no auth check performed)
-      * `{:unauthorized, conn}` - the callback returned `{:ok, record}` but authorization failed;
+      * `{:error, reason}` - the callback returned `{:error, reason}` (no auth check performed)
+      * `{:error, conn}` - the callback returned `{:ok, record}` but authorization failed;
         the transaction was rolled back and `conn` is halted via `c:handle_unauthorized/2`
+        (or the `:on_unauthorized` handler if provided)
+
+    ## Caveats
+
+    The callback runs inside `Repo.transaction/1`. Only database operations are
+    rolled back when authorization fails. Side effects such as sending emails,
+    publishing PubSub messages, or calling external APIs will **not** be undone.
+    Keep the callback limited to database operations.
     """
     @callback authorize_with_transaction(PhoenixTypes.conn(), (-> {:ok, term()} | {:error, term()})) ::
-                {:ok, term()} | {:error, term()} | {:unauthorized, PhoenixTypes.conn()}
+                {:ok, term()} | {:error, term()}
 
     @callback authorize_with_transaction(
                 PhoenixTypes.conn(),
                 (-> {:ok, term()} | {:error, term()}),
                 keyword()
               ) ::
-                {:ok, term()} | {:error, term()} | {:unauthorized, PhoenixTypes.conn()}
+                {:ok, term()} | {:error, term()}
   end
 
   @doc ~S"""
@@ -884,7 +895,11 @@ defmodule Permit.Phoenix.Controller do
           {:ok, record}
 
         {:error, :unauthorized} ->
-          {:unauthorized, controller_module.handle_unauthorized(action, conn)}
+          handler =
+            opts[:on_unauthorized] ||
+              fn action, conn -> controller_module.handle_unauthorized(action, conn) end
+
+          {:error, handler.(action, conn)}
 
         {:error, reason} ->
           {:error, reason}
