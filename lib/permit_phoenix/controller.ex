@@ -330,6 +330,59 @@ defmodule Permit.Phoenix.Controller do
         end
     """
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
+
+    @doc ~S"""
+    Wraps a record creating callback in a database transaction and verifies
+    that the created record satisfies the current user's authorization conditions.
+
+    This is used for `:create` actions where permissions are defined with
+    field-level conditions (e.g. `create(Article, user_id: user.id)`). The plug
+    only performs a module-level check, so the conditions are not verified against
+    the actual record.
+
+    ## Usage
+
+        def create(conn, %{"article" => params}) do
+          case authorize_with_transaction(conn, fn ->
+            Repo.insert(Article.changeset(%Article{}, params))
+          end) do
+            {:ok, article} -> redirect(conn, to: ~p"/articles/#{article}")
+            {:error, %Ecto.Changeset{} = changeset} -> render(conn, :new, changeset: changeset)
+            {:error, conn} -> conn
+          end
+        end
+
+    ## Options
+
+      * `:action` - override the action name (defaults to `Phoenix.Controller.action_name(conn)`)
+      * `:on_unauthorized` - custom unauthorized handler function `(action, conn -> conn)`.
+        Called instead of `c:handle_unauthorized/2` when the created record fails authorization.
+        Must halt the conn.
+
+    ## Return values
+
+      * `{:ok, record}` - the callback returned `{:ok, record}` and authorization passed
+      * `{:error, reason}` - the callback returned `{:error, reason}` (no auth check performed)
+      * `{:error, conn}` - the callback returned `{:ok, record}` but authorization failed;
+        the transaction was rolled back and `conn` is halted via `c:handle_unauthorized/2`
+        (or the `:on_unauthorized` handler if provided)
+
+    ## Caveats
+
+    The callback runs inside `Repo.transaction/1`. Only database operations are
+    rolled back when authorization fails. Side effects such as sending emails,
+    publishing PubSub messages, or calling external APIs will **not** be undone.
+    Keep the callback limited to database operations.
+    """
+    @callback authorize_with_transaction(PhoenixTypes.conn(), (-> {:ok, term()} | {:error, term()})) ::
+                {:ok, term()} | {:error, term()}
+
+    @callback authorize_with_transaction(
+                PhoenixTypes.conn(),
+                (-> {:ok, term()} | {:error, term()}),
+                keyword()
+              ) ::
+                {:ok, term()} | {:error, term()}
   end
 
   @doc ~S"""
@@ -550,6 +603,12 @@ defmodule Permit.Phoenix.Controller do
                         if(@permit_ecto_available?,
                           do: {:finalize_query, 2}
                         ),
+                        if(@permit_ecto_available?,
+                          do: {:authorize_with_transaction, 2}
+                        ),
+                        if(@permit_ecto_available?,
+                          do: {:authorize_with_transaction, 3}
+                        ),
                         handle_unauthorized: 2,
                         skip_preload: 0,
                         preload_actions: 0,
@@ -641,6 +700,16 @@ defmodule Permit.Phoenix.Controller do
         @impl true
         def finalize_query(query, resolution_context),
           do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
+
+        @impl true
+        def authorize_with_transaction(conn, callback, opts \\ []) do
+          Permit.Phoenix.Controller.authorize_with_transaction(
+            conn,
+            callback,
+            opts,
+            __MODULE__
+          )
+        end
       end
 
       @impl true
@@ -685,6 +754,12 @@ defmodule Permit.Phoenix.Controller do
           ),
           if(unquote(@permit_ecto_available?),
             do: {:finalize_query, 2}
+          ),
+          if(unquote(@permit_ecto_available?),
+            do: {:authorize_with_transaction, 2}
+          ),
+          if(unquote(@permit_ecto_available?),
+            do: {:authorize_with_transaction, 3}
           ),
           handle_unauthorized: 2,
           skip_preload: 0,
@@ -801,6 +876,43 @@ defmodule Permit.Phoenix.Controller do
 
     @doc false
     def finalize_query(query, %{}, _), do: query
+
+    @doc false
+    def authorize_with_transaction(conn, callback, opts, controller_module) do
+      action = opts[:action] || Phoenix.Controller.action_name(conn)
+      subject = controller_module.fetch_subject(conn)
+      auth_module = controller_module.authorization_module()
+      repo = auth_module.repo()
+
+      repo.transaction(fn ->
+        case callback.() do
+          {:ok, record} -> verify_or_rollback(auth_module, repo, subject, action, record)
+          {:error, reason} -> repo.rollback(reason)
+        end
+      end)
+      |> case do
+        {:ok, record} ->
+          {:ok, record}
+
+        {:error, :unauthorized} ->
+          handler =
+            opts[:on_unauthorized] ||
+              fn action, conn -> controller_module.handle_unauthorized(action, conn) end
+
+          {:error, handler.(action, conn)}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+
+    defp verify_or_rollback(auth_module, repo, subject, action, record) do
+      if auth_module.can(subject) |> Permit.verify_record(action, record) do
+        record
+      else
+        repo.rollback(:unauthorized)
+      end
+    end
   end
 
   @doc false
