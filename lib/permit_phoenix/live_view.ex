@@ -574,6 +574,84 @@ defmodule Permit.Phoenix.LiveView do
         end
     """
     @callback finalize_query(Ecto.Query.t(), Types.resolution_context()) :: Ecto.Query.t()
+
+    @doc ~S"""
+    Wraps a record creating callback in a database transaction and verifies
+    that the created record satisfies the current user's authorization conditions.
+
+    This is used for `:create` actions where permissions are defined with
+    field level conditions (e.g. `create(Article, user_id: user.id)`). The hook
+    only performs a module level check, so the conditions are not verified against
+    the actual record.
+
+    ## Usage
+
+    The `:action` defaults to `socket.assigns.live_action` (e.g. `:new`), which
+    transitively resolves to `:create` through Permit's action grouping.
+
+        @impl true
+        @permit_action :create
+        def handle_event("save", %{"article" => article_params}, socket) do
+          article_params = Map.put(article_params, "user_id", socket.assigns.current_scope.user.id)
+
+          case authorize_with_transaction(socket, fn ->
+            Blog.create_article(article_params)
+          end) do
+            {:ok, article} ->
+              {:noreply,
+               socket
+               |> put_flash(:info, "Article created successfully")
+               |> push_navigate(to: ~p"/articles/#{article}")}
+
+            {:error, %Ecto.Changeset{} = changeset} ->
+              {:noreply, assign(socket, :form, to_form(changeset))}
+
+            {:error, socket} ->
+              {:noreply, socket}
+          end
+        end
+
+    ## Options
+
+      * `:action` - override the action name used for the record-level authorization check.
+        Defaults to `socket.assigns.live_action`, which is the route's `:live_action` (e.g.
+        `:new` or `:edit`). This works correctly thanks to Permit's transitive action
+        resolution — `:new` transitively checks `:create` permissions. Override this if
+        your action grouping differs from the defaults.
+      * `:subject` - override the subject used for authorization. By default, the subject
+        is retrieved from `socket.assigns` using `use_scope?/0` (i.e. `current_scope`) or
+        `current_user`. Use this option if you have a custom `c:fetch_subject/2` override
+        that relies on session data, since session is not available in `handle_event` context.
+      * `:on_unauthorized` - custom unauthorized handler function `(action, socket -> socket)`.
+        Called instead of `c:handle_unauthorized/2` when the created record fails authorization.
+
+    ## Return values
+
+      * `{:ok, record}` - the callback returned `{:ok, record}` and authorization passed
+      * `{:error, reason}` - the callback returned `{:error, reason}` (no auth check performed)
+      * `{:error, socket}` - the callback returned `{:ok, record}` but authorization failed;
+        the transaction was rolled back and `socket` has been handled by `c:handle_unauthorized/2`
+        (or the `:on_unauthorized` handler if provided)
+
+    ## Caveats
+
+    The callback runs inside `Repo.transaction/1`. Only database operations are
+    rolled back when authorization fails. Side effects such as sending emails,
+    publishing PubSub messages, or calling external APIs will **not** be undone.
+    Keep the callback limited to database operations.
+    """
+    @callback authorize_with_transaction(
+                PhoenixTypes.socket(),
+                (-> {:ok, term()} | {:error, term()})
+              ) ::
+                {:ok, term()} | {:error, term()}
+
+    @callback authorize_with_transaction(
+                PhoenixTypes.socket(),
+                (-> {:ok, term()} | {:error, term()}),
+                keyword()
+              ) ::
+                {:ok, term()} | {:error, term()}
   end
 
   @doc ~S"""
@@ -1007,6 +1085,12 @@ defmodule Permit.Phoenix.LiveView do
                         if(@permit_ecto_available?,
                           do: {:finalize_query, 2}
                         ),
+                        if(@permit_ecto_available?,
+                          do: {:authorize_with_transaction, 2}
+                        ),
+                        if(@permit_ecto_available?,
+                          do: {:authorize_with_transaction, 3}
+                        ),
                         handle_unauthorized: 2,
                         skip_preload: 0,
                         preload_actions: 0,
@@ -1113,6 +1197,16 @@ defmodule Permit.Phoenix.LiveView do
         @impl true
         def finalize_query(query, resolution_context),
           do: unquote(__MODULE__).finalize_query(query, resolution_context, unquote(opts))
+
+        @impl true
+        def authorize_with_transaction(socket, callback, opts \\ []) do
+          Permit.Phoenix.LiveView.authorize_with_transaction(
+            socket,
+            callback,
+            opts,
+            __MODULE__
+          )
+        end
       end
 
       @impl true
@@ -1180,6 +1274,12 @@ defmodule Permit.Phoenix.LiveView do
           ),
           if(unquote(@permit_ecto_available?),
             do: {:finalize_query, 2}
+          ),
+          if(unquote(@permit_ecto_available?),
+            do: {:authorize_with_transaction, 2}
+          ),
+          if(unquote(@permit_ecto_available?),
+            do: {:authorize_with_transaction, 3}
           ),
           handle_unauthorized: 2,
           skip_preload: 0,
@@ -1386,6 +1486,54 @@ defmodule Permit.Phoenix.LiveView do
 
     @doc false
     def finalize_query(query, %{}, _opts), do: query
+
+    @doc false
+    def authorize_with_transaction(socket, callback, opts, live_view_module) do
+      action = opts[:action] || socket.assigns.live_action
+      subject = opts[:subject] || get_subject_from_socket(socket, live_view_module)
+      auth_module = live_view_module.authorization_module()
+      repo = auth_module.repo()
+
+      repo.transaction(fn ->
+        case callback.() do
+          {:ok, record} -> verify_or_rollback(auth_module, repo, subject, action, record)
+          {:error, reason} -> repo.rollback(reason)
+        end
+      end)
+      |> case do
+        {:ok, record} ->
+          {:ok, record}
+
+        {:error, :unauthorized} ->
+          handler =
+            opts[:on_unauthorized] ||
+              fn action, socket ->
+                {_halt_or_cont, socket} = live_view_module.handle_unauthorized(action, socket)
+                socket
+              end
+
+          {:error, handler.(action, socket)}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+
+    defp get_subject_from_socket(socket, live_view_module) do
+      if live_view_module.use_scope?() do
+        live_view_module.scope_subject(socket.assigns[:current_scope])
+      else
+        socket.assigns[:current_user]
+      end
+    end
+
+    defp verify_or_rollback(auth_module, repo, subject, action, record) do
+      if auth_module.can(subject) |> Permit.verify_record(action, record) do
+        record
+      else
+        repo.rollback(:unauthorized)
+      end
+    end
   end
 
   @doc false

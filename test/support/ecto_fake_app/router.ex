@@ -10,6 +10,7 @@ defmodule Permit.EctoFakeApp.Router do
   alias Permit.EctoLiveViewTest.DefaultBehaviorLive
   alias Permit.EctoLiveViewTest.SaveEventLive
   alias Permit.EctoLiveViewTest.SaveEventNoReloadLive
+  alias Permit.EctoLiveViewTest.TransactionLive
 
   pipeline :browser do
     plug(Plug.Session,
@@ -77,6 +78,8 @@ defmodule Permit.EctoFakeApp.Router do
 
       live("/save_event_items/:id/edit", SaveEventLive, :edit)
       live("/save_event_no_reload_items/:id/edit", SaveEventNoReloadLive, :edit)
+
+      live("/transaction_items/new", TransactionLive, :new)
     end
   end
 end
