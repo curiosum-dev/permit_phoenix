@@ -87,16 +87,20 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
         ) ::
           PhoenixTypes.live_authorization_result()
   defp authorize(socket, session, action, params, action_origin) do
-    cond do
-      action in socket.view.singular_actions() and action_origin == :handle_event and
-          not socket.view.reload_on_event?(action, socket) ->
-        authorize_preloaded_resource(socket, session, action)
+    if action in socket.view.except() do
+      {:authorized, socket}
+    else
+      cond do
+        action in socket.view.singular_actions() and action_origin == :handle_event and
+            not socket.view.reload_on_event?(action, socket) ->
+          authorize_preloaded_resource(socket, session, action)
 
-      action in socket.view.skip_preload() ->
-        just_authorize(socket, session, action)
+        action in socket.view.skip_preload() ->
+          just_authorize(socket, session, action)
 
-      true ->
-        preload_and_authorize(socket, session, action, params, action_origin)
+        true ->
+          preload_and_authorize(socket, session, action, params, action_origin)
+      end
     end
   end
 

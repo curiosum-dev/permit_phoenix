@@ -652,6 +652,75 @@ defmodule Permit.Phoenix.LiveView do
                 keyword()
               ) ::
                 {:ok, term()} | {:error, term()}
+
+    @doc ~S"""
+    Loads and authorizes a resource outside of the automatic hook flow.
+
+    This is useful when a LiveView needs to work with a different resource module
+    than the one configured via `c:resource_module/0`, or when you need to authorize
+    an action that doesn't correspond to the current `@live_action`.
+
+    Unlike the automatic hook, this function does **not** modify the socket.
+    It returns the raw authorization result, leaving it up to the caller
+    to handle the result and update the socket as needed.
+
+    ## Usage
+
+    Use `c:except/0` to opt an action out of automatic authorization, then call
+    `load_and_authorize` manually in `handle_params` or `handle_event`:
+
+        @impl true
+        def except, do: [:dashboard]
+
+        @impl true
+        def handle_params(params, _url, %{assigns: %{live_action: :dashboard}} = socket) do
+          articles = load_and_authorize(socket, :index, MyApp.Article, params)
+          comments = load_and_authorize(socket, :index, MyApp.Comment, params)
+
+          socket =
+            case {articles, comments} do
+              {{:authorized, articles}, {:authorized, comments}} ->
+                assign(socket, articles: articles, comments: comments)
+
+              _ ->
+                put_flash(socket, :error, "Unauthorized")
+            end
+
+          {:noreply, socket}
+        end
+
+    ## Options
+
+      * `:subject` - override the subject used for authorization. By default, the subject
+        is retrieved from `socket.assigns` using `use_scope?/0` (i.e. `current_scope`) or
+        `current_user`. Use this option if you have a custom `c:fetch_subject/2` override
+        that relies on session data, since session is not available in `handle_params`
+        or `handle_event` context.
+
+    ## Return values
+
+      * `{:authorized, records}` - authorization passed; `records` is a single struct
+        for singular actions (e.g. `:show`), or a list for plural actions (e.g. `:index`)
+      * `:unauthorized` - the subject does not have permission for the given action
+        on the given resource module
+      * `:not_found` - the record was not found (singular actions only)
+    """
+    @callback load_and_authorize(
+                PhoenixTypes.socket(),
+                Types.action_group(),
+                Types.resource_module(),
+                map()
+              ) ::
+                {:authorized, term()} | :unauthorized | :not_found
+
+    @callback load_and_authorize(
+                PhoenixTypes.socket(),
+                Types.action_group(),
+                Types.resource_module(),
+                map(),
+                keyword()
+              ) ::
+                {:authorized, term()} | :unauthorized | :not_found
   end
 
   @doc ~S"""
@@ -1091,6 +1160,12 @@ defmodule Permit.Phoenix.LiveView do
                         if(@permit_ecto_available?,
                           do: {:authorize_with_transaction, 3}
                         ),
+                        if(@permit_ecto_available?,
+                          do: {:load_and_authorize, 4}
+                        ),
+                        if(@permit_ecto_available?,
+                          do: {:load_and_authorize, 5}
+                        ),
                         handle_unauthorized: 2,
                         skip_preload: 0,
                         preload_actions: 0,
@@ -1207,6 +1282,18 @@ defmodule Permit.Phoenix.LiveView do
             __MODULE__
           )
         end
+
+        @impl true
+        def load_and_authorize(socket, action, resource_module, params, opts \\ []) do
+          Permit.Phoenix.LiveView.load_and_authorize(
+            socket,
+            action,
+            resource_module,
+            params,
+            opts,
+            __MODULE__
+          )
+        end
       end
 
       @impl true
@@ -1280,6 +1367,12 @@ defmodule Permit.Phoenix.LiveView do
           ),
           if(unquote(@permit_ecto_available?),
             do: {:authorize_with_transaction, 3}
+          ),
+          if(unquote(@permit_ecto_available?),
+            do: {:load_and_authorize, 4}
+          ),
+          if(unquote(@permit_ecto_available?),
+            do: {:load_and_authorize, 5}
           ),
           handle_unauthorized: 2,
           skip_preload: 0,
@@ -1517,6 +1610,41 @@ defmodule Permit.Phoenix.LiveView do
         {:error, reason} ->
           {:error, reason}
       end
+    end
+
+    @doc false
+    def load_and_authorize(socket, action, resource_module, params, opts, live_view_module) do
+      subject = opts[:subject] || get_subject_from_socket(socket, live_view_module)
+
+      authorization_module = live_view_module.authorization_module()
+      resolver_module = authorization_module.resolver_module()
+      use_loader? = live_view_module.use_loader?()
+
+      base_query = &live_view_module.base_query/1
+      finalize_query = &live_view_module.finalize_query/2
+      loader = &live_view_module.loader/1
+
+      singular? = action in live_view_module.singular_actions()
+
+      auth_function =
+        if singular?,
+          do: &resolver_module.authorize_and_preload_one!/5,
+          else: &resolver_module.authorize_and_preload_all!/5
+
+      auth_function.(
+        subject,
+        authorization_module,
+        resource_module,
+        action,
+        %{
+          params: params,
+          loader: loader,
+          socket: socket,
+          base_query: base_query,
+          finalize_query: finalize_query,
+          use_loader?: use_loader?
+        }
+      )
     end
 
     defp get_subject_from_socket(socket, live_view_module) do
