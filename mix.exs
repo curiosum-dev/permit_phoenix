@@ -83,9 +83,16 @@ defmodule Permit.Phoenix.MixProject do
       {:versioce, "~> 2.0.0", only: [:dev, :test], runtime: false},
       {:git_cli, "~> 0.3.0", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test, runtime: false},
-      {:lazy_html, ">= 0.1.0", only: :test},
-      {:igniter, "~> 0.5", optional: true}
-    ]
+      {:lazy_html, ">= 0.1.0", only: :test}
+    ] ++ igniter_dep()
+  end
+
+  defp igniter_dep do
+    if Version.match?(System.version(), ">= 1.15.0") do
+      [{:igniter, "~> 0.5", optional: true}]
+    else
+      []
+    end
   end
 
   defp docs do
