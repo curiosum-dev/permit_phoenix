@@ -1,7 +1,8 @@
-defmodule Mix.Tasks.Permit.Patch.LiveViewTest do
-  use ExUnit.Case
+if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter.Test) do
+  defmodule Mix.Tasks.Permit.Patch.LiveViewTest do
+    use ExUnit.Case
 
-  import Igniter.Test
+    import Igniter.Test
 
   defp project_with_live_view(live_view_code \\ nil) do
     code =
@@ -114,5 +115,6 @@ defmodule Mix.Tasks.Permit.Patch.LiveViewTest do
       ])
       |> assert_unchanged("lib/test_web/live/note_live/index.ex")
     end
+  end
   end
 end

@@ -1,7 +1,8 @@
-defmodule Mix.Tasks.PermitPhoenix.InstallTest do
-  use ExUnit.Case
+if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter.Test) do
+  defmodule Mix.Tasks.PermitPhoenix.InstallTest do
+    use ExUnit.Case
 
-  import Igniter.Test
+    import Igniter.Test
 
   defp project_with_web_module(opts \\ []) do
     app_name = Keyword.get(opts, :app_name, :test)
@@ -128,5 +129,6 @@ defmodule Mix.Tasks.PermitPhoenix.InstallTest do
       matches = Regex.scan(~r/use Permit\.Phoenix\.LiveView/, content)
       assert length(matches) == 1
     end
+  end
   end
 end

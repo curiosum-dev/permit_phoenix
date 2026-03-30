@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Igniter) do
+if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Permit.Patch.LiveView do
     @shortdoc "Patches a Phoenix LiveView to use Permit authorization"
 
@@ -146,21 +146,6 @@ if Code.ensure_loaded?(Igniter) do
 
     defp parse_module(string, _default) when is_binary(string) do
       string |> String.split(".") |> Module.concat()
-    end
-  end
-else
-  defmodule Mix.Tasks.Permit.Patch.LiveView do
-    @shortdoc "Patches a Phoenix LiveView to use Permit authorization"
-    @moduledoc "Patches a LiveView to use Permit authorization. Requires the `igniter` package."
-
-    use Mix.Task
-
-    def run(_argv) do
-      Mix.shell().error("""
-      The `permit.patch.live_view` task requires the `igniter` package.
-
-      Please add `{:igniter, "~> 0.5"}` to your dependencies and run `mix deps.get`.
-      """)
     end
   end
 end

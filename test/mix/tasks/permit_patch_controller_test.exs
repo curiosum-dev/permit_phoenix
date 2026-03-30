@@ -1,7 +1,8 @@
-defmodule Mix.Tasks.Permit.Patch.ControllerTest do
-  use ExUnit.Case
+if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter.Test) do
+  defmodule Mix.Tasks.Permit.Patch.ControllerTest do
+    use ExUnit.Case
 
-  import Igniter.Test
+    import Igniter.Test
 
   defp project_with_controller(controller_code \\ nil) do
     code =
@@ -111,5 +112,6 @@ defmodule Mix.Tasks.Permit.Patch.ControllerTest do
       matches = Regex.scan(~r/use Permit\.Phoenix\.Controller/, content)
       assert length(matches) == 1
     end
+  end
   end
 end
