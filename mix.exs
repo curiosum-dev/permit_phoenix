@@ -17,7 +17,7 @@ defmodule Permit.Phoenix.MixProject do
         "Phoenix, Plug and LiveView integrations for the Permit authorization library.",
       package: package(),
       dialyzer: [
-        plt_add_apps: [:ex_unit, :permit, :phoenix, :phoenix_live_view, :plug],
+        plt_add_apps: [:ex_unit, :mix, :permit, :phoenix, :phoenix_live_view, :plug],
         plt_ignore_apps: [:ecto, :ecto_sql, :permit_ecto],
         ignore_warnings: ".dialyzer_ignore.exs",
         list_unused_filters: true,
@@ -75,7 +75,7 @@ defmodule Permit.Phoenix.MixProject do
       {:postgrex, "~> 0.16", only: :test},
       {:phoenix_live_view, "#{live_view_version()}", optional: true},
       {:phoenix, "#{phoenix_version()}", optional: true},
-      {:jason, "~> 1.3", only: [:dev, :test]},
+      {:jason, "~> 1.3"},
       {:floki, ">= 0.30.0", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
@@ -84,7 +84,15 @@ defmodule Permit.Phoenix.MixProject do
       {:git_cli, "~> 0.3.0", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test, runtime: false},
       {:lazy_html, ">= 0.1.0", only: :test}
-    ]
+    ] ++ igniter_dep()
+  end
+
+  defp igniter_dep do
+    if Version.match?(System.version(), ">= 1.15.0") do
+      [{:igniter, "~> 0.5", optional: true}]
+    else
+      []
+    end
   end
 
   defp docs do
