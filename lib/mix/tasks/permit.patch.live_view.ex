@@ -130,7 +130,6 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
     end
 
     defp annotate_handle_events({:ok, zipper}), do: do_annotate_handle_events(zipper)
-    defp annotate_handle_events(other), do: other
 
     defp do_annotate_handle_events(zipper) do
       case Function.move_to_def(zipper, :handle_event, 3, target: :at) do
