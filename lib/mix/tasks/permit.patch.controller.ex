@@ -5,6 +5,11 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
     @moduledoc """
     Patches an existing Phoenix controller to use Permit authorization.
 
+    Adds `use Permit.Phoenix.Controller` with the specified `authorization_module`
+    and `resource_module`. If the controller already has `use Permit.Phoenix.Controller`
+    but no `resource_module`, adds a `resource_module/0` callback before the first
+    function definition.
+
     ## Usage
 
         mix permit.patch.controller MyAppWeb.ItemController MyApp.Item
@@ -60,15 +65,7 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
              update_controller(zipper, resource_module, use_code)
            end) do
         {:ok, igniter} ->
-          Igniter.add_notice(igniter, """
-          Patched #{inspect(controller_module)} with Permit authorization.
-
-          The controller now uses:
-            * authorization_module: #{inspect(authorization_module)}
-            * resource_module: #{inspect(resource_module)}
-
-          Review the controller to ensure action names map correctly to your permissions.
-          """)
+          Igniter.add_notice(igniter, controller_notice(controller_module, authorization_module, resource_module))
 
         {:error, igniter} ->
           Igniter.add_issue(igniter, """
@@ -76,6 +73,25 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
           Make sure the module exists and the name is correct.
           """)
       end
+    end
+
+    defp controller_notice(controller_module, authorization_module, resource_module) do
+      """
+      Patched #{inspect(controller_module)} with Permit authorization.
+
+      The controller now uses:
+        * authorization_module: #{inspect(authorization_module)}
+        * resource_module: #{inspect(resource_module)}
+
+      Next steps:
+
+        1. In each action, replace manual record lookups with `conn.assigns.loaded_resource`
+           (singular actions like `show`, `edit`, `update`, `delete`) or
+           `conn.assigns.loaded_resources` (plural actions like `index`).
+
+        2. Ensure your permissions module (#{inspect(authorization_module)}.Permissions) defines
+           rules for the relevant actions on #{inspect(resource_module)}.
+      """
     end
 
     defp update_controller(zipper, resource_module, use_code) do
@@ -89,13 +105,11 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
     end
 
     defp add_use_permit_controller(zipper, use_code) do
-      # Find last use statement and add after it
       case find_last_use(zipper) do
         {:ok, zipper} ->
           {:ok, Common.add_code(zipper, use_code, placement: :after)}
 
         :error ->
-          # No use statements found, add at the beginning of the module
           {:ok, Common.add_code(zipper, use_code, placement: :before)}
       end
     end
@@ -111,17 +125,7 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
         def resource_module, do: #{inspect(resource_module)}
         """
 
-        insert_after_last_use(zipper, callback_code)
-      end
-    end
-
-    defp insert_after_last_use(zipper, code) do
-      case find_last_use(zipper) do
-        {:ok, use_zipper} ->
-          {:ok, Common.add_code(use_zipper, code, placement: :after)}
-
-        :error ->
-          {:ok, Common.add_code(zipper, code, placement: :before)}
+        insert_before_first_def(zipper, callback_code)
       end
     end
 
@@ -134,6 +138,22 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
 
         _ ->
           false
+      end
+    end
+
+    defp insert_before_first_def(zipper, code) do
+      case Function.move_to_def(zipper, target: :before) do
+        {:ok, def_zipper} ->
+          {:ok, Common.add_code(def_zipper, code, placement: :before)}
+
+        :error ->
+          case find_last_use(zipper) do
+            {:ok, use_zipper} ->
+              {:ok, Common.add_code(use_zipper, code, placement: :after)}
+
+            :error ->
+              {:ok, Common.add_code(zipper, code, placement: :before)}
+          end
       end
     end
 

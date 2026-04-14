@@ -4,7 +4,8 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
 
     @moduledoc """
     Patches an existing Phoenix LiveView to use Permit authorization by adding
-    a `resource_module/0` callback.
+    a `resource_module/0` callback and `@permit_action` annotations on `handle_event/3`
+    clauses with recognized event names.
 
     ## Usage
 
@@ -26,6 +27,12 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
     alias Igniter.Code.Function
     alias Igniter.Code.Module, as: CodeModule
     alias Igniter.Project.Module, as: ProjectModule
+
+    @known_actions %{
+      "delete" => :delete,
+      "update" => :update,
+      "create" => :create
+    }
 
     @impl Igniter.Mix.Task
     def info(_argv, _composing_task) do
@@ -54,17 +61,10 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
              zipper
              |> maybe_add_use_permit_live_view(authorization_module)
              |> add_resource_module_callback(resource_module)
+             |> annotate_handle_events()
            end) do
         {:ok, igniter} ->
-          Igniter.add_notice(igniter, """
-          Patched #{inspect(live_view_module)} with Permit authorization.
-
-          The LiveView now implements resource_module/0 returning #{inspect(resource_module)}.
-
-          Ensure that:
-            1. Permit.Phoenix.LiveView.AuthorizeHook is in the router's on_mount
-            2. Add @permit_action before handle_event/3 clauses as needed
-          """)
+          Igniter.add_notice(igniter, live_view_notice(live_view_module, resource_module))
 
         {:error, igniter} ->
           Igniter.add_issue(igniter, """
@@ -74,10 +74,30 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
       end
     end
 
+    defp live_view_notice(live_view_module, resource_module) do
+      """
+      Patched #{inspect(live_view_module)} with Permit authorization.
+
+      The LiveView now implements resource_module/0 returning #{inspect(resource_module)}.
+      Recognized `handle_event/3` clauses (delete/update/create) were annotated with `@permit_action`.
+
+      Next steps:
+
+        1. Ensure `Permit.Phoenix.LiveView.AuthorizeHook` is in the router's on_mount for
+           this LiveView's live_session.
+
+        2. Add `@permit_action` annotations to any remaining `handle_event/3` clauses as needed.
+
+        3. Replace context-based record lookups with `socket.assigns.loaded_resource` /
+           `socket.assigns.loaded_resources` (populated by Permit after authorization).
+      """
+    end
+
+    # --- Use statement ---
+
     defp maybe_add_use_permit_live_view(zipper, authorization_module) do
       case CodeModule.move_to_use(zipper, Permit.Phoenix.LiveView) do
         {:ok, _} ->
-          # Already present (directly or via web module)
           zipper
 
         _ ->
@@ -105,12 +125,77 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
           {:ok, zipper}
 
         :error ->
+          insert_before_first_def(zipper, callback_code)
+      end
+    end
+
+    defp annotate_handle_events({:ok, zipper}), do: do_annotate_handle_events(zipper)
+    defp annotate_handle_events(other), do: other
+
+    defp do_annotate_handle_events(zipper) do
+      case Function.move_to_def(zipper, :handle_event, 3, target: :at) do
+        {:ok, event_zipper} ->
+          event_name = extract_event_name(Sourceror.Zipper.node(event_zipper))
+
+          case Map.get(@known_actions, event_name) do
+            nil ->
+              {:ok, zipper}
+
+            action ->
+              if already_annotated?(event_zipper, action) do
+                {:ok, zipper}
+              else
+                {:ok,
+                 Common.add_code(event_zipper, "@permit_action :#{action}", placement: :before)}
+              end
+          end
+
+        :error ->
+          {:ok, zipper}
+      end
+    end
+
+    defp already_annotated?(event_zipper, action) do
+      case Sourceror.Zipper.left(event_zipper) do
+        nil ->
+          false
+
+        left_zipper ->
+          match?(
+            {:@, _, [{:permit_action, _, [{:__block__, _, [^action]}]}]},
+            Sourceror.Zipper.node(left_zipper)
+          ) or
+            match?(
+              {:@, _, [{:permit_action, _, [^action]}]},
+              Sourceror.Zipper.node(left_zipper)
+            )
+      end
+    end
+
+    defp extract_event_name({:def, _, [{:handle_event, _, [name_node | _]}, _]}),
+      do: unwrap_string(name_node)
+
+    defp extract_event_name({:def, _, [{:when, _, [{:handle_event, _, [name_node | _]}, _]}, _]}),
+      do: unwrap_string(name_node)
+
+    defp extract_event_name(_), do: nil
+
+    defp unwrap_string({:__block__, _, [value]}) when is_binary(value), do: value
+    defp unwrap_string(value) when is_binary(value), do: value
+    defp unwrap_string(_), do: nil
+
+    defp insert_before_first_def(zipper, code) do
+      case Function.move_to_def(zipper, target: :before) do
+        {:ok, def_zipper} ->
+          {:ok, Common.add_code(def_zipper, code, placement: :before)}
+
+        :error ->
           case find_last_use(zipper) do
             {:ok, use_zipper} ->
-              {:ok, Common.add_code(use_zipper, callback_code, placement: :after)}
+              {:ok, Common.add_code(use_zipper, code, placement: :after)}
 
             :error ->
-              {:ok, Common.add_code(zipper, callback_code, placement: :before)}
+              {:ok, Common.add_code(zipper, code, placement: :before)}
           end
       end
     end
