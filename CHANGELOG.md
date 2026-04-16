@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `:index` routes ending with non-id path parameters (e.g. `/datethings/:year/:month`) are no longer misclassified as singular. The router based heuristic introduced in 0.4.0 promoted any route whose last segment was a parameter to singular, which broke list style actions scoped by non id parameters. `:index` is now treated as plural by convention and excluded from that promotion.
+
+### Added
+
+- `plural_actions/0` callback on `Permit.Actions`, `Permit.Phoenix.Controller` and `Permit.Phoenix.LiveView`. Declare custom collection actions (e.g. `:list`, `:search`, `:feed`) here to exclude them from router-based promotion to singular:
+
+  ```elixir
+  defmodule MyApp.Actions do
+    use Permit.Phoenix.Actions, router: MyApp.Router
+
+    @impl true
+    def plural_actions, do: [:feed, :search]
+  end
+  ```
+
+  Can also be overridden at the controller or LiveView level.
+
 ## [0.4.0]
 
 ### Added
