@@ -247,6 +247,21 @@ defmodule Permit.Phoenix.Controller do
   """
   @callback singular_actions() :: [atom()]
 
+  @doc """
+  Defines actions that should be treated as plural, overriding any router based
+  heuristic that would otherwise classify them as singular. Useful for custom
+  collection actions like `:list`, `:search` or `:feed` when mounted on routes
+  that end with a non id parameter.
+
+  ## Example
+
+      @impl true
+      def plural_actions do
+        [:feed, :search]
+      end
+  """
+  @callback plural_actions() :: [atom()]
+
   @doc ~S"""
   Declares the controller's resource module. For instance, when Phoenix and Ecto is used, typically for an `ArticleController` the resource will be an `Article` Ecto schema.
 
@@ -666,6 +681,12 @@ defmodule Permit.Phoenix.Controller do
       @impl true
       def singular_actions do
         unquote(opts)[:authorization_module].permissions_module().actions_module().singular_actions()
+        |> Kernel.--(plural_actions())
+      end
+
+      @impl true
+      def plural_actions do
+        unquote(opts)[:authorization_module].permissions_module().actions_module().plural_actions()
       end
 
       @impl true
@@ -698,7 +719,8 @@ defmodule Permit.Phoenix.Controller do
           handle_not_found: 1,
           unauthorized_message: 2,
           action_grouping: 0,
-          singular_actions: 0
+          singular_actions: 0,
+          plural_actions: 0
         ]
         |> Enum.filter(& &1)
       )

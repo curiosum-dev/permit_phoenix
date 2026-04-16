@@ -761,6 +761,11 @@ For convenience, the `:router` option of `use Permit.Phoenix.Actions` allows tak
  - it's a route with an `:id`, `:uuid` or `:slug` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
  - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
+ The last rule does not apply to actions that are plural by convention. By default this covers `:index`, so a route
+ like `/datethings/:year/:month` pointing at `:index` stays plural. Additional plural actions can be declared via
+ the `plural_actions/0` callback (in the actions module, controller, or LiveView), e.g. for custom collection
+ actions like `:list`, `:search` or `:feed` mounted on routes ending with a non-id parameter.
+
 ```elixir
 defmodule MyApp.Router do
   # ...

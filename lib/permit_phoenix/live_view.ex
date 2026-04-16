@@ -529,6 +529,16 @@ defmodule Permit.Phoenix.LiveView do
   """
   @callback singular_actions() :: [atom()]
 
+  @doc ~S"""
+  Defines actions that should be treated as plural, overriding any router based
+  heuristic that would otherwise classify them as singular. Useful for custom
+  collection actions like `:list`, `:search` or `:feed` when mounted on routes
+  that end with a non id parameter.
+
+  See `Permit.Phoenix.Actions` for reference.
+  """
+  @callback plural_actions() :: [atom()]
+
   if @permit_ecto_available? do
     @doc ~S"""
     Creates the basis for an Ecto query constructed by `Permit.Ecto` based on live view action,
@@ -1171,6 +1181,12 @@ defmodule Permit.Phoenix.LiveView do
       @impl true
       def singular_actions do
         unquote(opts)[:authorization_module].permissions_module().actions_module().singular_actions()
+        |> Kernel.--(plural_actions())
+      end
+
+      @impl true
+      def plural_actions do
+        unquote(opts)[:authorization_module].permissions_module().actions_module().plural_actions()
       end
 
       defoverridable(
@@ -1193,6 +1209,7 @@ defmodule Permit.Phoenix.LiveView do
           unauthorized_message: 2,
           action_grouping: 0,
           singular_actions: 0,
+          plural_actions: 0,
           use_stream?: 1,
           use_scope?: 0,
           scope_subject: 1,
