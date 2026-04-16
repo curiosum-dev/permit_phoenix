@@ -133,24 +133,24 @@ if Version.match?(System.version(), ">= 1.15.0") and Code.ensure_loaded?(Igniter
 
     defp do_annotate_handle_events(zipper) do
       case Function.move_to_def(zipper, :handle_event, 3, target: :at) do
-        {:ok, event_zipper} ->
-          event_name = extract_event_name(Sourceror.Zipper.node(event_zipper))
+        {:ok, event_zipper} -> maybe_annotate(zipper, event_zipper)
+        :error -> {:ok, zipper}
+      end
+    end
 
-          case Map.get(@known_actions, event_name) do
-            nil ->
-              {:ok, zipper}
+    defp maybe_annotate(zipper, event_zipper) do
+      event_name = extract_event_name(Sourceror.Zipper.node(event_zipper))
+      action = Map.get(@known_actions, event_name)
 
-            action ->
-              if already_annotated?(event_zipper, action) do
-                {:ok, zipper}
-              else
-                {:ok,
-                 Common.add_code(event_zipper, "@permit_action :#{action}", placement: :before)}
-              end
-          end
-
-        :error ->
+      cond do
+        is_nil(action) ->
           {:ok, zipper}
+
+        already_annotated?(event_zipper, action) ->
+          {:ok, zipper}
+
+        true ->
+          {:ok, Common.add_code(event_zipper, "@permit_action :#{action}", placement: :before)}
       end
     end
 
