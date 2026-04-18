@@ -36,6 +36,12 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
     <button id="navigate_show" phx-click="navigate" phx-value-url="/live/items/1">show</button>
     <button id="navigate_edit" phx-click="navigate" phx-value-url="/live/items/1/edit">edit</button>
     <button id="delete" phx-click="delete" phx-value-id="2">delete</button>
+
+    <div :if={Map.has_key?(assigns, :streams) and Map.has_key?(assigns.streams, :loaded_resources)} id="items" phx-update="stream">
+      <div :for={{id, item} <- @streams.loaded_resources} id={id}>
+        <%= item.id %>
+      </div>
+    </div>
     """
   end
 
@@ -72,7 +78,12 @@ defmodule Permit.EctoLiveViewTest.HooksLive do
 
   @impl true
   def use_stream?(socket) do
-    socket.private.connect_info.params["stream"] == "true"
+    case socket.private.connect_info.params["stream"] do
+      "true" -> true
+      "reset" -> [reset: true]
+      "dom_id" -> [dom_id: fn item -> "custom-#{item.id}" end]
+      _ -> false
+    end
   end
 
   def run(lv, func) do

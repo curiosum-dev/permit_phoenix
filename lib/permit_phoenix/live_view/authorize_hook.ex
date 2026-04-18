@@ -43,12 +43,12 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
          _ -> false
        end) do
       quote do
-        if is_list(unquote(value)) and unquote(socket).view.use_stream?(unquote(socket)) do
-          unquote(socket)
-          |> Phoenix.LiveView.stream(unquote(key), unquote(value))
+        evaluated_value = unquote(value)
+
+        if opts = unquote(__MODULE__).stream_options(unquote(socket), evaluated_value) do
+          Phoenix.LiveView.stream(unquote(socket), unquote(key), evaluated_value, opts)
         else
-          unquote(socket)
-          |> Phoenix.Component.assign(unquote(key), unquote(value))
+          Phoenix.Component.assign(unquote(socket), unquote(key), evaluated_value)
         end
       end
     else
@@ -58,6 +58,18 @@ defmodule Permit.Phoenix.LiveView.AuthorizeHook do
               Phoenix LiveView is not available.
               Please add a dependency {:phoenix_live_view, \"~> 0.16\"} to use LiveView integration.
               """
+      end
+    end
+  end
+
+  @doc false
+  def stream_options(socket, value) do
+    if is_list(value) do
+      case socket.view.use_stream?(socket) do
+        false -> nil
+        nil -> nil
+        true -> []
+        opts when is_list(opts) -> opts
       end
     end
   end

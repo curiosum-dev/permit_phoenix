@@ -453,6 +453,9 @@ defmodule MyAppWeb.ArticleLive.Index do
 
   # Alternatively, use a callback for conditional stream usage.
   #
+  # It can return `true` for default options, or a keyword list of options
+  # passed to `Phoenix.LiveView.stream/4` (e.g. `[reset: true]`).
+  #
   # You needn't set use_stream? to false with singular actions, e.g. :show, etc.
   # - in their case, even if set to true, normal assigns will be used.
   @impl true
