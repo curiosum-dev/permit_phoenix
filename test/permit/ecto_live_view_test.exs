@@ -93,6 +93,22 @@ defmodule Permit.EctoLiveViewTest do
       assert assigns.streams |> Map.has_key?(:loaded_resources)
     end
 
+    test "can do :index on items using a stream with options", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/live/items?stream=reset")
+
+      assigns = get_assigns(lv)
+
+      assert assigns.streams |> Map.has_key?(:loaded_resources)
+    end
+
+    test "can do :index on items using a stream with custom dom_id", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, "/live/items?stream=dom_id")
+
+      # The default dom_id would be something like "loaded_resources-1"
+      # But our custom one should be "custom-1"
+      assert html =~ "id=\"custom-1\""
+    end
+
     test "can do :show on owned item", %{conn: conn} do
       {:ok, lv, _html} = live(conn, "/live/items/1")
 

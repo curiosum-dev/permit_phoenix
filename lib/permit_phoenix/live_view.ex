@@ -913,6 +913,10 @@ defmodule Permit.Phoenix.LiveView do
 
   Defaults to `false`, which means that the resources will be assigned to `:loaded_resources`.
 
+  If it returns `true`, the resources will be streamed with default options (appended).
+  If it returns a keyword list, the resources will be streamed and the list will be passed
+  as options to `Phoenix.LiveView.stream/4` (e.g. `[reset: true]`).
+
   ## Example
 
       # Recommended: set a default use_stream? for all LiveViews
@@ -920,7 +924,7 @@ defmodule Permit.Phoenix.LiveView do
         def live_view do
           quote do
             use Permit.Phoenix.LiveView,
-              use_stream?: true,
+              use_stream?: [reset: true],
               # other options...
           end
         end
@@ -928,9 +932,10 @@ defmodule Permit.Phoenix.LiveView do
 
       # Set for a single LiveView
       @impl true
-      def use_stream?(socket), do: true
+      def use_stream?(%{assigns: %{live_action: :index}}), do: [reset: true]
+      def use_stream?(_socket), do: false
   """
-  @callback use_stream?(PhoenixTypes.socket()) :: boolean()
+  @callback use_stream?(PhoenixTypes.socket()) :: boolean() | keyword()
 
   @doc ~S"""
   Determines whether to use Phoenix Scopes for fetching the subject. Set to `false` in Phoenix <1.8.
