@@ -20,6 +20,11 @@ defmodule Permit.EctoFakeApp.Permissions do
     |> all(Item, fn user, item -> item.owner_id == user.id end)
   end
 
+  def can(:creator = _role) do
+    permit()
+    |> create(Item, [user, _item], owner_id: user.id)
+  end
+
   def can(:inspector = _role) do
     permit()
     |> read(Item)

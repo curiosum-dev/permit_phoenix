@@ -11,6 +11,7 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
   alias Permit.EctoLiveViewTest.DefaultBehaviorLive
   alias Permit.EctoLiveViewTest.SaveEventLive
   alias Permit.EctoLiveViewTest.SaveEventNoReloadLive
+  alias Permit.EctoLiveViewTest.TransactionLive
 
   scope "/" do
     live_session :authenticated,
@@ -40,6 +41,8 @@ defmodule Permit.EctoLiveViewTest.LiveRouter do
 
       live("/save_event_items/:id/edit", SaveEventLive, :edit)
       live("/save_event_no_reload_items/:id/edit", SaveEventNoReloadLive, :edit)
+
+      live("/transaction_items/new", TransactionLive, :new)
     end
   end
 
