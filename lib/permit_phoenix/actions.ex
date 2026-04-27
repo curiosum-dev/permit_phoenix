@@ -164,12 +164,14 @@ defmodule Permit.Phoenix.Actions do
         |> unquote(__MODULE__).merge_from_router(unquote(opts)[:router])
       end
 
+      def plural_actions, do: []
+
       def singular_actions do
         # Call at runtime to pick up router changes during live reload
         unquote(__MODULE__).singular_actions(unquote(opts)[:router], plural_actions())
       end
 
-      defoverridable grouping_schema: 0, singular_actions: 0
+      defoverridable grouping_schema: 0, singular_actions: 0, plural_actions: 0
     end
   end
 
