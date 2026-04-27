@@ -47,6 +47,10 @@ defmodule Permit.EctoFakeApp.Router do
 
     get("/", Permit.EctoFakeApp.ActionPluralityController, :list)
     get("/:id", Permit.EctoFakeApp.ActionPluralityController, :view)
+    get("/by_date/:year/:month", Permit.EctoFakeApp.ActionPluralityController, :index)
+    get("/by_slug/:slug", Permit.EctoFakeApp.ActionPluralityController, :show)
+    get("/by_name/:name", Permit.EctoFakeApp.ActionPluralityController, :custom_view)
+    get("/feeds/:tag", Permit.EctoFakeApp.ActionPluralityController, :feed)
   end
 
   ## Live routes testing

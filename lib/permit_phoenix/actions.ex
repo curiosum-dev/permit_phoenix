@@ -105,6 +105,12 @@ defmodule Permit.Phoenix.Actions do
   - it's a route with an `:id`, `:uuid` or `:slug` parameter, e.g. `/items/:id/view` or `/items/:uuid/view`, or
   - the route's last segment is a parameter, e.g. `/items/:name`, `/items/:identifier`.
 
+  The last rule does not apply to actions that are plural by convention. By
+  default this covers `:index`, so a route like `/datethings/:year/:month`
+  pointing at `:index` stays plural. Additional plural actions can be declared
+  through the `c:plural_actions/0` callback (see below), e.g. for custom
+  collection actions like `:list`, `:search` or `:feed`.
+
   ```
   defmodule MyApp.Router do
     # ...
@@ -147,6 +153,7 @@ defmodule Permit.Phoenix.Actions do
   use Permit.Actions
 
   @default_singular_actions [:show, :edit, :new, :delete, :update, :create]
+  @default_plural_actions [:index]
 
   defmacro __using__(opts) do
     quote do
@@ -157,12 +164,14 @@ defmodule Permit.Phoenix.Actions do
         |> unquote(__MODULE__).merge_from_router(unquote(opts)[:router])
       end
 
+      def plural_actions, do: []
+
       def singular_actions do
         # Call at runtime to pick up router changes during live reload
-        unquote(__MODULE__).singular_actions(unquote(opts)[:router])
+        unquote(__MODULE__).singular_actions(unquote(opts)[:router], plural_actions())
       end
 
-      defoverridable grouping_schema: 0, singular_actions: 0
+      defoverridable grouping_schema: 0, singular_actions: 0, plural_actions: 0
     end
   end
 
@@ -182,14 +191,22 @@ defmodule Permit.Phoenix.Actions do
 
   @doc """
   Returns the list of actions that operate on a single resource.
+
+  Actions listed as plural (either `@default_plural_actions` currently `[:index]`
+  or the user supplied `extra_plural`) are excluded from router based
+  promotion to singular even if their route would otherwise satisfy the
+  heuristic (e.g. `/datethings/:year/:month` for an `:index` action).
   """
-  def singular_actions(router_module)
+  def singular_actions(router_module, extra_plural \\ [])
 
-  def singular_actions(nil), do: @default_singular_actions
+  def singular_actions(nil, _extra_plural), do: @default_singular_actions
 
-  def singular_actions(router_module) do
+  def singular_actions(router_module, extra_plural) do
+    plural = @default_plural_actions ++ extra_plural
+
     router_module
     |> filtered_routes_stream()
+    |> Stream.reject(fn route -> route.plug_opts in plural end)
     |> Stream.filter(fn %{path: path, verb: verb} = _route ->
       # Plug.Router.Utils is private API, subject to change. Hasn't changed in years, though.
       {param_name_atoms, segments} = Plug.Router.Utils.build_path_match(path)
