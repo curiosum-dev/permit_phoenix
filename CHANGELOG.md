@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.0] - 2026-04-28
+
+### Added
+
+- Igniter installer tasks: `mix permit_phoenix.install`, `mix permit.patch.controller`, `mix permit.patch.live_view` for zero-config project setup (#51)
+- `plural_actions/0` callback on `Permit.Phoenix.Actions`, `Permit.Phoenix.Controller` and `Permit.Phoenix.LiveView` declare custom collection actions to exclude them from router based singular promotion (#54)
+- LiveView stream options pass custom options to LiveView streams via the `stream_options/0` callback (#55)
+- Documentation and examples for using non-Ecto resources in `resource_module/0` (#56)
+
+### Fixed
+
+- `:index` routes with non-id path parameters (e.g. `/reports/:year/:month`) were incorrectly promoted to singular by the router-based heuristic. `:index` is now always treated as plural by convention (#54)
+- Authorization for `:create` actions is now checked against a blank struct, preventing conditioned rules from passing unconditionally (#48)
+
+## [0.4.0]
+
 ### Fixed
 
 - `:index` routes ending with non-id path parameters (e.g. `/datethings/:year/:month`) are no longer misclassified as singular. The router based heuristic introduced in 0.4.0 promoted any route whose last segment was a parameter to singular, which broke list style actions scoped by non id parameters. `:index` is now treated as plural by convention and excluded from that promotion.

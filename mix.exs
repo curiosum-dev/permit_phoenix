@@ -2,7 +2,7 @@ defmodule Permit.Phoenix.MixProject do
   @moduledoc false
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.5.0"
   @source_url "https://github.com/curiosum-dev/permit_phoenix"
 
   def project do
@@ -68,8 +68,8 @@ defmodule Permit.Phoenix.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:permit, "~> 0.3.3"},
-      {:permit_ecto, "~> 0.2", optional: true},
+      {:permit, "~> 0.4.0"},
+      {:permit_ecto, "~> 0.3", optional: true},
       {:ecto, "~> 3.0", optional: true},
       {:ecto_sql, "~> 3.0", optional: true},
       {:postgrex, "~> 0.16", only: :test},
