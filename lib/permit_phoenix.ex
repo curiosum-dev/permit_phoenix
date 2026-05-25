@@ -25,7 +25,7 @@ defmodule Permit.Phoenix do
   def deps do
     [
       {:permit_phoenix, "~> 0.4.0"},
-      {:permit_ecto, "~> 0.2.4"}
+      {:permit_ecto, "~> 0.3.1"}
     ]
   end
   ```
