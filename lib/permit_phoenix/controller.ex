@@ -268,7 +268,7 @@ defmodule Permit.Phoenix.Controller do
   This resource module, along with the controller action name, will be used for authorization checks before each action.
 
   If `Permit.Ecto` is used, this setting selects the Ecto schema which will be used for automatic preloading a record for authorization.
-  If you need to control access to a page which does not clearly map to a database schema, you can reference any other model, like `MyApp.Dashboard` here and then need to set skip_preload/0 so that Permit will not try to preload this non-database module. 
+  If you need to control access to a page which does not clearly map to a database schema, you can reference any other model, like `MyApp.Dashboard` here and then need to set skip_preload/0 so that Permit will not try to preload this non-database module.
 
   ## Example
 
@@ -641,6 +641,7 @@ defmodule Permit.Phoenix.Controller do
                       |> Enum.filter(& &1)
 
   defmacro __using__(opts) do
+    # credo:disable-for-next-line
     quote generated: true do
       require Logger
 
