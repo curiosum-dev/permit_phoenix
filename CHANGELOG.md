@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Reverted `:igniter` dependency from `only: [:dev, :test], runtime: false` back to `optional: true`, restoring correct Igniter behaviour for generator tasks.
+
 ## [v0.5.0] - 2026-04-28
 
 ### Added

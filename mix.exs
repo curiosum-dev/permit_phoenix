@@ -68,8 +68,8 @@ defmodule Permit.Phoenix.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:permit, "~> 0.4.0"},
-      {:permit_ecto, "~> 0.3", optional: true},
+      {:permit, "~> 0.4.1"},
+      {:permit_ecto, "~> 0.3.1", optional: true},
       {:ecto, "~> 3.0", optional: true},
       {:ecto_sql, "~> 3.0", optional: true},
       {:postgrex, "~> 0.16", only: :test},
@@ -89,7 +89,7 @@ defmodule Permit.Phoenix.MixProject do
 
   defp igniter_dep do
     if Version.match?(System.version(), ">= 1.15.0") do
-      [{:igniter, "~> 0.5", only: [:dev, :test], runtime: false}]
+      [{:igniter, "~> 0.5", optional: true, runtime: false}]
     else
       []
     end
